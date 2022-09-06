@@ -52,16 +52,17 @@ const TableStyle = styled(Table)`
   }
 ` as typeof Table;
 
-export const MintNFTConfirm = <// T extends NFT_MINT_VALUE<I>,
+export const MintNFTConfirm = <
   ME extends Partial<NFTMETA>,
   MI extends Partial<MintTradeNFT<any>>,
   I,
-  C extends FeeInfo>({
-                       disabled,
-                       tradeData: nftMintData,
-                       metaData,
-                       btnInfo,
-                       nftMintBtnStatus,
+  C extends FeeInfo
+>({
+  disabled,
+  tradeData: nftMintData,
+  metaData,
+  btnInfo,
+  nftMintBtnStatus,
   isFeeNotEnough,
   handleFeeChange,
   chargeFeeTokenList,
@@ -69,8 +70,8 @@ export const MintNFTConfirm = <// T extends NFT_MINT_VALUE<I>,
   onNFTMintClick,
   mintService,
 }: NFTMintViewProps<ME, MI, I, C>) => {
-  const {t, ...rest} = useTranslation(["common"]);
-  const {isMobile} = useSettings();
+  const { t, ...rest } = useTranslation(["common"]);
+  const { isMobile } = useSettings();
   const [dropdownStatus, setDropdownStatus] =
     React.useState<"up" | "down">("down");
   const getDisabled = React.useMemo(() => {
