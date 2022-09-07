@@ -133,6 +133,7 @@ export const MetaNFTPanel = <
             handleMintDataChange={nftMintProps.handleMintDataChange}
             // handleOnMetaChange={nftMetaProps.handleOnMetaChange}
             // onMetaClick={nftMetaProps.onMetaClick}
+            disabled={ipfsMediaSources?.isProcessing}
             nftMeta={nftMintValue.nftMETA as Me}
             mintData={nftMintValue.mintData as Mi}
             feeInfo={nftMintProps.feeInfo}
