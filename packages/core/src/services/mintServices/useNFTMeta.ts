@@ -185,12 +185,12 @@ export function useNFTMeta<T extends NFTMETA>({
   const updateBtnStatus = React.useCallback(
     (error?: ErrorType & any) => {
       resetBtnInfo();
-      // myLog(
-      //   "nftMetaBtnStatus nftMintValue",
-      //   nftMintValue.mintData,
-      //   nftMintValue.nftMETA,
-      //   nftMintValue.mintData.fee
-      // );
+      myLog(
+        "nftMetaBtnStatus nftMintValue",
+        nftMintValue.mintData,
+        nftMintValue.nftMETA,
+        nftMintValue.mintData.fee
+      );
       if (
         !error &&
         nftMintValue &&
