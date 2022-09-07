@@ -169,10 +169,12 @@ export function useNFTMeta<T extends NFTMETA>({
     updateData: ({ fee }) => {
       const { nftMETA, mintData } =
         store.getState()._router_modalData.nftMintValue;
-      updateNFTMintData({
-        nftMETA: nftMETA,
-        mintData: { ...mintData, fee },
-      });
+      if (mintData.tokenAddress === nftMintValue.mintData.tokenAddress) {
+        updateNFTMintData({
+          nftMETA: nftMETA,
+          mintData: { ...mintData, fee },
+        });
+      }
     },
   });
   const {

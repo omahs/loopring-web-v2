@@ -347,9 +347,13 @@ const modalDataSlice: Slice<ModalDataStatus> = createSlice({
       const mintData = action.payload.mintData;
       const nftMETA = action.payload.nftMETA;
       const error = action.payload.error;
-      const { balance, tradeValue, ...rest } = mintData;
+      const { balance, tradeValue, tokenAddress, ...rest } = mintData;
 
       state.lastStep = LAST_STEP.nftMint;
+
+      if (tokenAddress) {
+        state.nftMintValue.mintData.tokenAddress = tokenAddress;
+      }
 
       if (balance === undefined || balance >= 0) {
         state.nftMintValue.mintData.balance = balance;
