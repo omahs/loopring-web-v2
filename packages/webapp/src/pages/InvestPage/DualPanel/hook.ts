@@ -1,4 +1,4 @@
-import { useHistory, useRouteMatch } from "react-router-dom";
+import { useHistory, useLocation, useRouteMatch } from "react-router-dom";
 import {
   confirmation,
   findDualMarket,
@@ -23,6 +23,11 @@ export const useDualHook = ({
   setConfirmDualInvest: (state: any) => void;
 }) => {
   const match: any = useRouteMatch("/invest/dual/:market?");
+  const { search } = useLocation();
+  const [beginnerMode, setBeginnerMode] = React.useState<boolean>(
+    new URLSearchParams(search).get('beginnerMode') === 'true'
+  )
+
   const { marketArray, marketMap, tradeMap, status: dualStatus } = useDualMap();
   const { tokenPrices } = useTokenPrices();
   const [priceObj, setPriceObj] = React.useState<{
@@ -71,6 +76,13 @@ export const useDualHook = ({
     return [coinA, coinB];
   });
 
+  const onToggleBeginnerMode = React.useCallback(() => {
+    const searchParams = new URLSearchParams(search)
+    searchParams.set('beginnerMode', beginnerMode ? 'false' : 'true')
+    history.push(`${match.url}?${searchParams.toString()}`)
+    setBeginnerMode(!beginnerMode)
+  }, [beginnerMode])
+
   const handleOnPairChange = React.useCallback(
     (
       prosp:
@@ -93,7 +105,7 @@ export const useDualHook = ({
         setPairBSymbol(_pairBSymbol);
         market = findDualMarket(marketArray, _pairASymbol, _pairBSymbol);
       }
-      history.push(`/invest/dual/${_pairASymbol}-${_pairBSymbol}`);
+      history.push(`/invest/dual/${_pairASymbol}-${_pairBSymbol}${search}`);
 
       if (market) {
         const [, , coinA, coinB] = market ?? "".match(/(dual-)?(\w+)-(\w+)/i);
@@ -241,6 +253,8 @@ export const useDualHook = ({
     marketQuote,
     priceObj,
     pair,
+    beginnerMode,
+    onToggleBeginnerMode
     // confirmShowNoBalance,
     // setConfirmShowNoBalance,
     // serverUpdate,

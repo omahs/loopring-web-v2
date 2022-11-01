@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import styled from "@emotion/styled";
 import {
   Box,
@@ -8,6 +8,8 @@ import {
   Tab,
   Tabs,
   Typography,
+  Switch,
+  FormControlLabel
 } from "@mui/material";
 import { Trans, WithTranslation, withTranslation } from "react-i18next";
 import { useDualHook } from "./hook";
@@ -26,7 +28,7 @@ import {
   useSystem,
   useTokenMap,
 } from "@loopring-web/core";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation, useParams, useRouteMatch } from "react-router-dom";
 import {
   BackIcon,
   getValuePrecisionThousand,
@@ -35,6 +37,7 @@ import {
 import * as sdk from "@loopring-web/loopring-sdk";
 import { DUAL_TYPE } from "@loopring-web/loopring-sdk";
 import { useTheme } from "@emotion/react";
+import { useSearchParam } from "react-use";
 
 const StyleDual = styled(Box)`
   position: relative;
@@ -112,6 +115,8 @@ export const DualListPanel: any = withTranslation("common")(
       marketQuote,
       priceObj,
       handleOnPairChange,
+      beginnerMode,
+      onToggleBeginnerMode
     } = useDualHook({ setConfirmDualInvest });
 
     const { dualTradeProps, dualToastOpen, closeDualToast } = useDualTrade();
@@ -155,6 +160,10 @@ export const DualListPanel: any = withTranslation("common")(
             width={isMobile ? "100%" : "initial"}
             justifyContent={"space-between"}
           >
+            <FormControlLabel 
+              control={<Switch checked={beginnerMode} onChange={onToggleBeginnerMode} />} 
+              label={t("labelInvestDualBeginerMode")} 
+            />
             <Button
               startIcon={<HelpIcon fontSize={"large"} />}
               variant={"text"}
