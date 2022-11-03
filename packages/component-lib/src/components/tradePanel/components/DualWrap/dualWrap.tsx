@@ -266,10 +266,10 @@ export const DualDetail = ({
       {
         displayMode === 'beginnerModeStep2' && (
           <>
-            <Box>
-              <Typography>At Settlement Date</Typography>
-              <Typography>Index Price is derived from some leading exchanges.</Typography>
-              <Box>
+            <Box paddingX={2} marginTop={2} >
+              <Typography variant={"h5"} marginBottom={0}>At Settlement Date</Typography>
+              <Typography color={"textSecondary"} marginBottom={1}>Index Price is derived from some leading exchanges.</Typography>
+              <Box marginBottom={1} display={"flex"} justifyContent={"space-between"}>
                 <Typography>if Index Price ≤ {targetView} </Typography>
                 <Typography>
                   {base &&
@@ -281,7 +281,7 @@ export const DualDetail = ({
                     })}
                 </Typography>
               </Box>
-              <Box>
+              <Box marginBottom={5} display={"flex"} justifyContent={"space-between"}>
                 <Typography>if Index Price {'>'} {targetView}</Typography>
                 <Typography>
                   {quote &&
@@ -296,7 +296,13 @@ export const DualDetail = ({
                 </Typography>
               </Box>
             </Box>
-            <Typography>Your token for investment will be locked until Settlement Date.</Typography>
+            <Typography 
+              textAlign={"center"} 
+              color={"var(--color-text-third)"}
+              variant={"body2"}
+              >
+                Your token for investment will be locked until Settlement Date.
+            </Typography>
           </>
         )
       }
@@ -507,10 +513,11 @@ export const DualWrap = <
   // const history = useHistory();
   const priceSymbol = dualCalcData?.dualViewInfo?.currentPrice?.quote;
   // const priceBase = dualCalcData?.dualViewInfo?.currentPrice?.base;
-  const [beginnerModeStep, setBeginnerModeStep] = React.useState<'step1' | 'step2'>('step1');
-  const displayMode: DisaplyMode = isBeginnerMode
-    ? beginnerModeStep === 'step1' ? 'beginnerModeStep1' : 'beginnerModeStep2'
-    : 'nonBeginnerMode'
+  // const [beginnerModeStep, setBeginnerModeStep] = React.useState<'step1' | 'step2'>('step1');
+  const [displayMode, setDisplayMode] = React.useState<DisaplyMode>(isBeginnerMode ? 'beginnerModeStep1' : 'nonBeginnerMode');
+  // const displayMode: DisaplyMode = isBeginnerMode
+  //   ? beginnerModeStep === 'step1' ? 'beginnerModeStep1' : 'beginnerModeStep2'
+  //   : 'nonBeginnerMode'
 
   const getDisabled = React.useMemo(() => {
     return disabled || dualCalcData === undefined;
@@ -704,12 +711,8 @@ export const DualWrap = <
                 size={"medium"}
                 color={"primary"}
                 onClick={() => {
-                  if (isBeginnerMode) {
-                    if (beginnerModeStep === 'step1') {
-                      setBeginnerModeStep('step2')
-                    } else {
-                      onSubmitClick();
-                    }
+                  if (displayMode === 'beginnerModeStep1') {
+                    setDisplayMode('beginnerModeStep2')
                   } else {
                     onSubmitClick();
                   }
