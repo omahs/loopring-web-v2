@@ -46,11 +46,13 @@ export const ModalDualPanel = withTranslation("common")(
     dualTradeProps,
     dualToastOpen,
     closeDualToast,
+    // isBeginnerMode,
     ...rest
   }: WithTranslation & {
     dualTradeProps: DualWrapProps<any, any, any>;
     dualToastOpen?: { open?: boolean; type: any; content: string };
     closeDualToast?: (state: boolean) => void;
+    isBeginnerMode: boolean
   }) => {
     const {
       modals: { isShowDual },

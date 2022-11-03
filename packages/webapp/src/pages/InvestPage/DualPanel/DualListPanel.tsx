@@ -435,15 +435,15 @@ export const DualListPanel: any = withTranslation("common")(
                   </Box>
                 </WrapperStyled>
               </StyleDual>
-
-              <ModalDualPanel
-                dualTradeProps={dualTradeProps}
-                dualToastOpen={dualToastOpen}
-                closeDualToast={closeDualToast}
-              />
             </>
           )
         }
+      <ModalDualPanel
+        dualTradeProps={dualTradeProps}
+        dualToastOpen={dualToastOpen}
+        closeDualToast={closeDualToast}
+        isBeginnerMode
+      />
       </Box>
     );
   }

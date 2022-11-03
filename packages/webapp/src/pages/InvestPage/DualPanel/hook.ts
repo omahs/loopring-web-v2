@@ -17,6 +17,12 @@ import {
   SagaStatus,
 } from "@loopring-web/common-resources";
 const DUALLimit = 20;
+
+const useBeginnerModeState = () => {
+  
+
+}
+
 export const useDualHook = ({
   setConfirmDualInvest,
 }: {

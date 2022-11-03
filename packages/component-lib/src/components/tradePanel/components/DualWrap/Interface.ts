@@ -12,6 +12,7 @@ export type DualWrapProps<T, I, DUAL> = {
   btnInfo?: BtnInfo;
   refreshRef: React.Ref<any>;
   onRefreshData?: (shouldFeeUpdate?: boolean, clearTrade?: boolean) => void;
+  isBeginnerMode: boolean;
   isLoading: boolean;
   tokenMap: { [key: string]: TokenInfo };
   // maxSellVol?: string;
