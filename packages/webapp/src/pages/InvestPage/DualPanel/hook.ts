@@ -18,9 +18,30 @@ import {
 } from "@loopring-web/common-resources";
 const DUALLimit = 20;
 
-const useBeginnerModeState = () => {
-  
-
+export const useBeginnerModeState = () => {
+  const [step1SelectedToken, setStep1SelectedToken] = React.useState<string | undefined>(undefined)
+  const [step2BuyOrSell, setStep2BuyOrSell] = React.useState< "Buy" | "Sell" | undefined>(undefined)
+  const [step3USDCOrUSDT, setStep3USDCOrUSDT] = React.useState< "USDT" | "USDC" | undefined>(undefined)
+  const onSelectStep1Token = React.useCallback((token: string) => {
+    setStep1SelectedToken(token)
+    setStep2BuyOrSell(undefined)
+    setStep3USDCOrUSDT(undefined)
+  }, [])
+  const onSelectStep2BuyOrSell = React.useCallback((which: "Buy" | "Sell") => {
+    setStep2BuyOrSell(which)
+    setStep3USDCOrUSDT(undefined)
+  }, [])
+  const onSelectStep3USDCOrUSDT = React.useCallback((which: "USDT" | "USDC") => {
+    setStep3USDCOrUSDT(which)
+  }, [])
+  return {
+    step1SelectedToken,
+    step2BuyOrSell,
+    step3USDCOrUSDT,
+    onSelectStep1Token,
+    onSelectStep2BuyOrSell,
+    onSelectStep3USDCOrUSDT,
+  }
 }
 
 export const useDualHook = ({

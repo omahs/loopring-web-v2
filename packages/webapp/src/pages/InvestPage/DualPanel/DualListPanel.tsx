@@ -38,7 +38,7 @@ import * as sdk from "@loopring-web/loopring-sdk";
 import { DUAL_TYPE } from "@loopring-web/loopring-sdk";
 import { useTheme } from "@emotion/react";
 import { useSearchParam } from "react-use";
-import { BeginnerMode } from "./BeginnerMode";
+import { BeginnerMode, IOSSwitch } from "./BeginnerMode";
 
 const StyleDual = styled(Box)`
   position: relative;
@@ -162,8 +162,8 @@ export const DualListPanel: any = withTranslation("common")(
             justifyContent={"space-between"}
           >
             <FormControlLabel
-              control={<Switch checked={beginnerMode} onChange={onToggleBeginnerMode} />}
-              label={t("labelInvestDualBeginerMode")}
+              control={<IOSSwitch  checked={beginnerMode} onChange={onToggleBeginnerMode} />}
+              label={  <Typography variant={"h6"} marginLeft={1}>{t("labelInvestDualBeginerMode")}</Typography> }
             />
             <Button
               startIcon={<HelpIcon fontSize={"large"} />}

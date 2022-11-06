@@ -1,21 +1,14 @@
-import React, { useEffect } from "react";
 import styled from "@emotion/styled";
 import {
   Box,
-  Card,
-  CardContent,
-  Grid,
-  Tab,
-  Tabs,
   Typography,
+  Avatar,
   Switch,
-  FormControlLabel,
-  Avatar
+  SwitchProps
 } from "@mui/material";
 import { Trans, WithTranslation, withTranslation } from "react-i18next";
-import { useDualHook } from "./hook";
+import { useBeginnerModeState, useDualHook } from "./hook";
 import {
-  Button,
   CoinIcon,
   CoinIcons,
   DualTable,
@@ -23,29 +16,36 @@ import {
   useSettings,
 } from "@loopring-web/component-lib";
 import {
-  ModalDualPanel,
   useDualMap,
-  useDualTrade,
   useSystem,
   useTokenMap,
 } from "@loopring-web/core";
-import { useHistory, useLocation, useParams, useRouteMatch } from "react-router-dom";
 import {
-  BackIcon,
   getValuePrecisionThousand,
-  HelpIcon,
 } from "@loopring-web/common-resources";
 import * as sdk from "@loopring-web/loopring-sdk";
 import { DUAL_TYPE } from "@loopring-web/loopring-sdk";
 import { useTheme } from "@emotion/react";
-import { useSearchParam } from "react-use";
+import _, { keys, mapValues, maxBy, minBy, toPairs, values } from "lodash";
 
-const SelectBox = styled(Box)`
+const SelectBox = styled(Box) <{ selected: boolean }>`
+  cursor: pointer;
   display: flex;
   flex-direction: row;
   border: 1px solid;
-  border-color: ${({selected}: ({selected: boolean})) => selected ? "#FFFFFF" : "#49527D"};
-  margin-right: 20px;
+  border-radius: ${({ theme }) => 0.5 * theme.unit}px;
+  border-color: ${({ selected, theme }: ({ selected: boolean, theme: any })) => selected ? theme.colorBase.borderSelect : theme.colorBase.border};
+  margin-right: ${({ theme }) => 2.5 * theme.unit}px;
+`
+const WhiteCircleText = styled(Box)`
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  height: ${({ theme }) => theme.unit * 3}px;
+  width: ${({ theme }) => theme.unit * 3}px;
+  border-radius: ${({ theme }) => theme.unit * 1.5}px;
+  border: ${({ theme }) => `2px solid ${theme.colorBase.textPrimary}`};
+  border-color: ${({ theme }) => theme.colorBase.textPrimary}; 
 `
 
 const WrapperStyled = styled(Box)`
@@ -56,6 +56,57 @@ const WrapperStyled = styled(Box)`
   border-radius: ${({ theme }) => theme.unit}px;
 `;
 
+export const IOSSwitch = styled((props: SwitchProps) => (
+  <Switch focusVisibleClassName=".Mui-focusVisible" disableRipple {...props} />
+))(({ theme }) => ({
+  width: 44,
+  height: 22,
+  padding: 0,
+  '& .MuiSwitch-switchBase': {
+    padding: 0,
+    margin: 2,
+    transitionDuration: '300ms',
+    '&.Mui-checked': {
+      transform: 'translateX(22px)',
+      color: '#fff',
+      '& + .MuiSwitch-track': {
+        backgroundColor: theme.colorBase.primary,
+        opacity: 1,
+        border: 0,
+      },
+      '&.Mui-disabled + .MuiSwitch-track': {
+        opacity: 0.5,
+      },
+    },
+    '&.Mui-focusVisible .MuiSwitch-thumb': {
+      color: '#33cf4d',
+      border: '6px solid #fff',
+    },
+    '&.Mui-disabled .MuiSwitch-thumb': {
+      color:
+        theme.palette.mode === 'light'
+          ? theme.palette.grey[100]
+          : theme.palette.grey[600],
+    },
+    '&.Mui-disabled + .MuiSwitch-track': {
+      opacity: theme.palette.mode === 'light' ? 0.7 : 0.3,
+    },
+  },
+  '& .MuiSwitch-thumb': {
+    boxSizing: 'border-box',
+    width: 18,
+    height: 18,
+  },
+  '& .MuiSwitch-track': {
+    borderRadius: 22 / 2,
+    backgroundColor: theme.palette.mode === 'light' ? '#E9E9EA' : '#39393D',
+    opacity: 1,
+    transition: theme.transitions.create(['background-color'], {
+      duration: 500,
+    }),
+  },
+}));
+
 export const BeginnerMode: any = withTranslation("common")(
   ({
     t,
@@ -64,14 +115,14 @@ export const BeginnerMode: any = withTranslation("common")(
     setConfirmDualInvest: (state: any) => void;
   }) => {
     const { tradeMap, marketMap } = useDualMap();
-    
-    const step1SelectedToken: string | undefined = "LRC"
-    const step2BuyOrSell: "Buy" | "Sell" | undefined = "Sell"
-    const step3USDCOrUSDT: "USDT" | "USDC" | undefined = "USDT"
+
+    // const step1SelectedToken: string | undefined = "LRC"
+    // const step2BuyOrSell: "Buy" | "Sell" | undefined = "Sell"
+    // const step3USDCOrUSDT: "USDT" | "USDC" | undefined = "USDT"
 
     const { coinJson } = useSettings();
     const { forexMap } = useSystem();
-    const { tokenMap } = useTokenMap();
+    const { tokenMap, idIndex } = useTokenMap();
     const { setShowDual } = useOpenModals();
     const {
       // pairASymbol,
@@ -83,96 +134,151 @@ export const BeginnerMode: any = withTranslation("common")(
       market,
     } = useDualHook({ setConfirmDualInvest });
     const { isMobile } = useSettings();
+    const {
+      step1SelectedToken,
+      step2BuyOrSell,
+      step3USDCOrUSDT,
+      onSelectStep1Token,
+      onSelectStep2BuyOrSell,
+      onSelectStep3USDCOrUSDT,
+    } = useBeginnerModeState()
+
     const dualType = new RegExp(pair).test(market ?? "")
       ? sdk.DUAL_TYPE.DUAL_BASE
       : sdk.DUAL_TYPE.DUAL_CURRENCY;
     const pairASymbol = step1SelectedToken
     const pairBSymbol = step3USDCOrUSDT
     const tokenList = Reflect.ownKeys(tradeMap)
-      .filter(tokenName => tokenName !== 'USDT' && tokenName !== 'USDC')
+      .filter(tokenName => tokenName !== 'USDT' && tokenName !== 'USDC' && tokenName !== 'OLDUSDC')
       .sort((a, b) => a.toString().localeCompare(b.toString()))
       .map(tokenName => {
+        const list = values(marketMap)
+          .flatMap(x => {
+            const baseToken = idIndex[x.baseTokenId]
+            const quoteToken = idIndex[x.quoteTokenId]
+            return [
+              {
+                token: baseToken,
+                apyInfo: x.baseTokenApy
+              },
+              {
+                token: quoteToken,
+                apyInfo: x.quoteTokenApy
+              },
+            ]
+          }).filter(x => x.token === tokenName.toString())
+        const min = minBy(list, x => {
+          return Number(x.apyInfo.min)
+        })
+        const max = maxBy(list, x => {
+          return Number(x.apyInfo.max)
+        })
         return {
           tokenName,
-          minAPY: '0.001',
-          maxAPY: '0.002',
+          minAPY: min?.apyInfo.min,
+          maxAPY: max?.apyInfo.max,
           logo: 'https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png'
         }
       })
+    const theme = useTheme();
+    const showStep2 = step1SelectedToken !== undefined
+    const showStep3 = step2BuyOrSell !== undefined
+    const showTable = step3USDCOrUSDT !== undefined
     return (
       <Box display={"flex"} flexDirection={"column"} flex={1} marginBottom={2}>
-        <>
-          <Typography>1. Choose a token to sell or buy</Typography>
+        <Box marginBottom={5}>
+          <Typography marginBottom={2} display={"flex"} variant={"h5"} >
+            <WhiteCircleText>1</WhiteCircleText>
+            <Typography marginLeft={1}>Choose a token to sell or buy</Typography>
+          </Typography>
           <Box display={"flex"} flexDirection={"row"}>
-            {tokenList.map(({ tokenName, minAPY, maxAPY, logo }) => (
-              <SelectBox padding={"12px 16px"} selected={step1SelectedToken === tokenName}>
-                <CoinIcon symbol={(typeof tokenName === 'string') ? tokenName : ''}/>
-                {/* <Avatar alt={'todo'} src={coinJson[(typeof tokenName === 'string') ? tokenName : '']} /> */}
-                <Box>
-                  <Typography>
-                    {tokenName}
-                  </Typography>
-                  <Typography>
-                    APR: {minAPY} - {maxAPY}
-                  </Typography>
-                </Box>
-              </SelectBox>
-            ))}
-          </Box>
-        </>
+            {tokenList.map(({ tokenName, minAPY, maxAPY, logo }) => {
+              const selected = step1SelectedToken === tokenName
 
-        <>
-          <Typography>2. Choose a token to sell or buy</Typography>
+              return (
+                <SelectBox onClick={() => onSelectStep1Token(tokenName)} padding={"12px 16px"} selected={selected}>
+                  <CoinIcon size={32} symbol={(typeof tokenName === 'string') ? tokenName : ''} />
+
+                  {/* <Avatar alt={'todo'} src={coinJson[(typeof tokenName === 'string') ? tokenName : '']} /> */}
+                  <Box marginLeft={1.5}>
+                    <Typography color={selected ? theme.colorBase.textPrimary : theme.colorBase.textThird}>
+                      {tokenName}
+                    </Typography>
+                    <Typography variant={"body2"} color={theme.colorBase.textThird}>
+                      APR: {minAPY} - {maxAPY}
+                    </Typography>
+                  </Box>
+                </SelectBox>
+
+              )
+            })}
+          </Box>
+        </Box>
+
+        {showStep2 && <Box marginBottom={5}>
+          <Typography marginBottom={2} display={"flex"} variant={"h5"} >
+            <WhiteCircleText>2</WhiteCircleText>
+            <Typography marginLeft={1}>Choose a token to sell or buy</Typography>
+          </Typography>
           <Box display={"flex"} flexDirection={"row"}>
-            <SelectBox padding={"12px 16px"} selected={step2BuyOrSell === "Sell"}>
-              
+            <SelectBox onClick={() => onSelectStep2BuyOrSell('Sell')} marginRight={1.5} paddingX={1.5} paddingY={2} selected={step2BuyOrSell === "Sell"}>
               <Avatar alt={'todo'} src={"https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png"} />
-              <Box>
-                <Typography>
+              <Box marginLeft={1.5}>
+                <Typography color={step2BuyOrSell === "Sell" ? theme.colorBase.textPrimary : theme.colorBase.textThird}>
                   Sell {step1SelectedToken} High
                 </Typography>
-                <Typography>
+                <Typography variant={"body2"} color={theme.colorBase.textThird}>
                   You will receive USDC or USDT
                 </Typography>
               </Box>
             </SelectBox>
-            <SelectBox padding={"12px 16px"} selected={step2BuyOrSell === "Buy"}>
+            <SelectBox onClick={() => onSelectStep2BuyOrSell('Buy')} padding={"12px 16px"} selected={step2BuyOrSell === "Buy"}>
               <Avatar alt={'todo'} src={"https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png"} />
-              <Box>
-                <Typography>
+              <Box marginLeft={1.5}>
+                <Typography color={step2BuyOrSell === "Buy" ? theme.colorBase.textPrimary : theme.colorBase.textThird} >
                   Buy {step1SelectedToken} Low
                 </Typography>
-                <Typography>
+                <Typography variant={"body2"} color={theme.colorBase.textThird}>
                   You can invest USDC or USDT
                 </Typography>
               </Box>
             </SelectBox>
           </Box>
-        </>
+        </Box>}
 
-        <>
-          <Typography>3. Choose Target Price and Settlement Date</Typography>
-          <Box display={"flex"} flexDirection={"row"}>
-            <SelectBox padding={"12px"} selected={step3USDCOrUSDT === "USDC"}>
-              <Avatar alt={'todo'} src={"https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png"} />
-              {
-                step2BuyOrSell === "Buy"
-                  ? "Buy low with USDC"
-                  : "Sell high for USDC"
-              }
-            </SelectBox>
-            <SelectBox padding={"12px"} selected={step3USDCOrUSDT === "USDT"}>
-              <Avatar alt={'todo'} src={"https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png"} />
-              {
-                step2BuyOrSell === "Buy"
-                  ? "Buy low with USDT"
-                  : "Sell high for USDT"
-              }
-            </SelectBox>
+        {showStep3 &&
+          <Box marginBottom={2}>
+            <Typography marginBottom={2} display={"flex"} variant={"h5"} >
+              <WhiteCircleText>3</WhiteCircleText>
+              <Typography marginLeft={1}>Choose Target Price and Settlement Date</Typography>
+            </Typography>
+            <Box display={"flex"} flexDirection={"row"}>
+              <SelectBox onClick={() => onSelectStep3USDCOrUSDT("USDC")} alignItems={"center"} padding={1.5} selected={step3USDCOrUSDT === "USDC"}>
+                <CoinIcon size={20} symbol={"USDC"} />
+                <Typography marginLeft={1}>
+                  {
+                    step2BuyOrSell === "Buy"
+                      ? "Buy low with USDC"
+                      : "Sell high for USDC"
+                  }
+                </Typography>
+              </SelectBox>
+              <SelectBox onClick={() => onSelectStep3USDCOrUSDT("USDT")} alignItems={"center"} padding={1.5} selected={step3USDCOrUSDT === "USDT"}>
+                <CoinIcon size={20} symbol={"USDT"} />
+                <Typography marginLeft={1}>
+                  {
+                    step2BuyOrSell === "Buy"
+                      ? "Buy low with USDT"
+                      : "Sell high for USDT"
+                  }
+
+                </Typography>
+
+              </SelectBox>
+            </Box>
           </Box>
-        </>
-
-        <WrapperStyled marginTop={1} flex={1} flexDirection={"column"}>
+        }
+        {showTable && <WrapperStyled marginTop={1} flex={1} flexDirection={"column"}>
           {pairASymbol && pairBSymbol && market && (
             <Box
               display={"flex"}
@@ -337,8 +443,7 @@ export const BeginnerMode: any = withTranslation("common")(
               }}
             />
           </Box>
-        </WrapperStyled>
-
+        </WrapperStyled>}
       </Box>
     );
   }
