@@ -10,6 +10,7 @@ import {
   OrderListIcon,
   SCENARIO,
   SlippageTolerance,
+  SoursURL,
   SwapSettingIcon,
   TradeCalcData,
 } from "@loopring-web/common-resources";
@@ -312,7 +313,7 @@ export const SwapPanel = withTranslation("common", { withRef: true })(
                       aria-describedby={settingPopoverId}
                       size={"large"}
                     >
-                      <SwapSettingIcon />
+                      <img src={SoursURL + "images/setting.png"}/>
                     </IconButtonStyled>
                   </Typography>
                   <PopoverStyled
