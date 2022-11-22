@@ -1,6 +1,6 @@
 import { SwapProps, SwapTradeData } from "../Interface";
 import { withTranslation, WithTranslation } from "react-i18next";
-import React, { useCallback, useState } from "react";
+import React from "react";
 import { Box, Grid, Popover, Switch, Tooltip, Typography } from "@mui/material";
 import { SwitchPanel, SwitchPanelProps } from "../../basic-lib";
 import {
@@ -195,8 +195,8 @@ export const SwapPanel = withTranslation("common", { withRef: true })(
       };
     }, [panelEventSubject]);
 
-    const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
-    const [settingPopoverOpen, setSettingPopoverOpen] = useState(false)
+    const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
+    const [settingPopoverOpen, setSettingPopoverOpen] = React.useState(false)
     const settingPopoverId = settingPopoverOpen ? 'setting-popover' : undefined;
     const { slippage, swapSecondConfirmation, setSwapSecondConfirmation} = useSettings();
     const slippageArray = SlippageTolerance.concat(
@@ -204,7 +204,7 @@ export const SwapPanel = withTranslation("common", { withRef: true })(
     ) as Array<number | string>;
     const tradeData = swapData.tradeData;
     
-    const onSwitchChangeCallback = useCallback(() => {
+    const onSwitchChangeCallback = React.useCallback(() => {
       setToastOpen && setToastOpen({
         open: true,
         content: rest.t("labelSwapSettingToggleSuccess", {
