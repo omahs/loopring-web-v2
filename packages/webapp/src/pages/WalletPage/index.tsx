@@ -1,11 +1,15 @@
 import { WithTranslation, withTranslation } from "react-i18next";
-import React from "react";
+import React, { MouseEventHandler } from "react";
 import {
   AccountStatus,
+  AddIcon,
+  ExitIcon,
+  LockIcon,
+  RoundAddIcon,
   SoursURL,
   subMenuGuardian,
 } from "@loopring-web/common-resources";
-import { Box, Link, Typography } from "@mui/material";
+import { Box, Button, Link, Typography } from "@mui/material";
 import {
   GuardianStep,
   ModalQRCode,
@@ -21,6 +25,103 @@ import { WalletHistory } from "./WalletHistory";
 import { WalletValidationInfo } from "./WalletValidationInfo";
 import { WalletProtector } from "./WalletProtector";
 import { useTheme } from "@emotion/react";
+import styled from "@emotion/styled";
+
+const WrongStatusStyled = styled(Box)`
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+  padding: ${({theme}) => theme.unit * 10}px auto;
+  background-color: ${({theme}) => theme.colorBase.box};
+  .logo{
+    width: ${({theme}) => theme.unit * 8}px;
+    height: ${({theme}) => theme.unit * 8}px;
+    margin-bottom: ${({theme}) => theme.unit * 8}px;
+  }
+  .content{
+    text-align: center;
+    color: ${({theme}) => theme.colorBase.textSecondary};
+    width: ${({theme}) => theme.unit * 50}px;
+    margin-bottom: ${({theme}) => theme.unit * 8}px;
+  }
+  .button{
+    color: ${({theme}) => theme.colorBase.textSecondary};
+  }
+`
+
+const WrongStatus = ({ logo, content, onClickDisconnect }: { logo: string, content: string, onClickDisconnect: MouseEventHandler}) => {
+  return <WrongStatusStyled>
+    <img className={"logo"} src={logo} />
+    <Typography className={"content"}>
+      {content}
+    </Typography>
+    <Button className={"button"} onClick={onClickDisconnect}>
+      <ExitIcon />
+      <Typography marginLeft={0.5}>
+        Disconnect
+      </Typography>
+    </Button>
+  </WrongStatusStyled>
+}
+
+const SectionStyled = styled(Box)`
+  padding: ${({theme}) => theme.unit * 4}px;
+  background: ${({theme}) => theme.colorBase.box};
+  margin-bottom: ${({theme}) => theme.unit * 2}px;
+  width: ${({theme}) => theme.unit * 60}px;
+  cursor: pointer;
+  /* display: flex;
+  flex-direction: column; */
+`
+
+const Section = ({logo, title, description, onClick} : {logo: JSX.Element, title: string, description?: string, onClick: MouseEventHandler}) => {
+  return <>
+    <SectionStyled onClick={onClick}>
+      <Box display={"flex"}>
+        {logo}
+        <Box paddingLeft={3}>
+          <Typography variant={"h4"}>{title}</Typography> 
+          {description && <Typography color={"var(--color-text-third) "}>{description}</Typography>}
+        </Box>
+      </Box>
+    </SectionStyled>
+  </>
+}
+
+const YoStyled = styled(Box)`
+  display: flex;
+  /* justify-content: center; */
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+  padding: ${({theme}) => theme.unit * 10}px auto;
+  /* background-color: ${({theme}) => theme.colorBase.box}; */
+  /* .logo{
+    width: ${({theme}) => theme.unit * 8}px;
+    height: ${({theme}) => theme.unit * 8}px;
+    margin-bottom: ${({theme}) => theme.unit * 8}px;
+  }
+  .content{
+    text-align: center;
+    color: ${({theme}) => theme.colorBase.textSecondary};
+    width: ${({theme}) => theme.unit * 50}px;
+    margin-bottom: ${({theme}) => theme.unit * 8}px;
+  }
+  .button{
+    color: ${({theme}) => theme.colorBase.textSecondary};
+  } */
+`
+
+const Yo = () => {
+  return <YoStyled marginTop={2}>
+    <Section onClick={() => {}} title={"Set as Guardian"} logo={<RoundAddIcon style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}}  />} />
+    <Section description={"Who I Protect"} onClick={() => {}} title={"Lock/unlock Wallet"}  logo={<LockIcon style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}}/>} />
+    <Section description={"Guardian Request Handling"} onClick={() => {}} title={"Approve Requests"} logo={<img style={{width: '32px', height: '32px'}} src={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"} />} />
+    <Section description={"Guardian Handling Records"} onClick={() => {}} title={"View History"} logo={<img style={{width: '32px', height: '32px'}} src={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"} />} />
+  </YoStyled>
+}
 
 export const GuardianPage = withTranslation(["common"])(
   ({ t, ..._rest }: WithTranslation) => {
@@ -77,6 +178,7 @@ export const GuardianPage = withTranslation(["common"])(
         return { ...state };
       });
     };
+    const isSmartContractWallet = true
     const guardianRouter = (isLoading: boolean) => {
       switch (selected) {
         case "guardian-validation-info":
@@ -173,7 +275,7 @@ export const GuardianPage = withTranslation(["common"])(
       }
     };
     const { isMobile } = useSettings();
-
+    account.readyState = AccountStatus.UN_CONNECT
     const viewTemplate = React.useMemo(() => {
       switch (account.readyState) {
         case AccountStatus.UN_CONNECT:
@@ -213,7 +315,15 @@ export const GuardianPage = withTranslation(["common"])(
         case AccountStatus.NOT_ACTIVE:
         case AccountStatus.DEPOSITING:
         case AccountStatus.ACTIVATED:
-          return (
+          return isSmartContractWallet 
+          ?  <WrongStatus 
+              logo={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"}
+              content={"The connected wallet is a Loopring Smart Wallet. Please use your Loopring Wallet mobile app to add Guardians."}
+              onClickDisconnect={() => {
+
+              }}
+            />
+          : (
             <>
               <Box
                 width={"200px"}
@@ -277,7 +387,17 @@ export const GuardianPage = withTranslation(["common"])(
       isLoading,
       guardianRouter,
     ]);
-    const theme = useTheme();
+    return <Yo/>
+    // return (
+    //   <WrongStatus
+    //     content={"The connected wallet is a Loopring Smart Wallet. Please use your Loopring Wallet mobile app to add Guardians."}
+    //     logo={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"}
+    //     onClickDisconnect={() => {
+
+    //     }}
+    //   />
+    // )
+    
     return (
       <>
         <ModalQRCode
@@ -324,7 +444,12 @@ export const GuardianPage = withTranslation(["common"])(
             },
           }}
         />
-        <>{viewTemplate}</>
+        <>
+        
+        {
+        viewTemplate
+        }
+        </>
       </>
     );
   }

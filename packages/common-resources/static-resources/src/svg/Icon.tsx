@@ -1435,3 +1435,12 @@ export const OrderListIconV2 = (props: SvgIconProps & {stroke: string}) => {
 };
 
 
+export const RoundAddIcon = (props: SvgIconProps) => {
+  return (    
+    <SvgIcon {...props} viewBox="0 0 32 32" aria-hidden="true">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M16 0C24.8306 0 32 7.16939 32 16C32 24.8306 24.8306 32 16 32C7.16939 32 0 24.8306 0 16C0 7.16939 7.16939 0 16 0ZM16 1.3913C24.0626 1.3913 30.6087 7.93739 30.6087 16C30.6087 24.0626 24.0626 30.6087 16 30.6087C7.93739 30.6087 1.3913 24.0626 1.3913 16C1.3913 7.93739 7.93739 1.3913 16 1.3913ZM16.6957 15.3043H25.0435V16.6957H16.6957V25.0435H15.3043V16.6957H6.95652V15.3043H15.3043V6.95652H16.6957V15.3043Z" fill="#15162B"/>
+    </SvgIcon>
+  );
+};
+
+
