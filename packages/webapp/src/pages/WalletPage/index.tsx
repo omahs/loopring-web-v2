@@ -3,11 +3,16 @@ import React, { MouseEventHandler } from "react";
 import {
   AccountStatus,
   AddIcon,
+  ApprovalIcon,
   ExitIcon,
   LockIcon,
+  LockIcon2,
+  RightArrowIcon,
+  RightIcon,
   RoundAddIcon,
   SoursURL,
   subMenuGuardian,
+  ViewHistoryIcon,
 } from "@loopring-web/common-resources";
 import { Box, Button, Link, Typography } from "@mui/material";
 import {
@@ -67,25 +72,28 @@ const WrongStatus = ({ logo, content, onClickDisconnect }: { logo: string, conte
 }
 
 const SectionStyled = styled(Box)`
-  padding: ${({theme}) => theme.unit * 4}px;
+  padding: auto ${({theme}) => theme.unit * 4}px;
   background: ${({theme}) => theme.colorBase.box};
   margin-bottom: ${({theme}) => theme.unit * 2}px;
   width: ${({theme}) => theme.unit * 60}px;
   cursor: pointer;
-  /* display: flex;
-  flex-direction: column; */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 `
 
 const Section = ({logo, title, description, onClick} : {logo: JSX.Element, title: string, description?: string, onClick: MouseEventHandler}) => {
   return <>
     <SectionStyled onClick={onClick}>
-      <Box display={"flex"}>
+      <Box display={"flex"}  alignItems={"center"}>
         {logo}
         <Box paddingLeft={3}>
           <Typography variant={"h4"}>{title}</Typography> 
           {description && <Typography color={"var(--color-text-third) "}>{description}</Typography>}
         </Box>
+        
       </Box>
+      <RightIcon />
     </SectionStyled>
   </>
 }
@@ -117,9 +125,9 @@ const YoStyled = styled(Box)`
 const Yo = () => {
   return <YoStyled marginTop={2}>
     <Section onClick={() => {}} title={"Set as Guardian"} logo={<RoundAddIcon style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}}  />} />
-    <Section description={"Who I Protect"} onClick={() => {}} title={"Lock/unlock Wallet"}  logo={<LockIcon style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}}/>} />
-    <Section description={"Guardian Request Handling"} onClick={() => {}} title={"Approve Requests"} logo={<img style={{width: '32px', height: '32px'}} src={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"} />} />
-    <Section description={"Guardian Handling Records"} onClick={() => {}} title={"View History"} logo={<img style={{width: '32px', height: '32px'}} src={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"} />} />
+    <Section description={"Who I Protect"} onClick={() => {}} title={"Lock/unlock Wallet"}  logo={<LockIcon2 style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}}/>} />
+    <Section description={"Guardian Request Handling"} onClick={() => {}} title={"Approve Requests"} logo={<ApprovalIcon style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}} />} />
+    <Section description={"Guardian Handling Records"} onClick={() => {}} title={"View History"} logo={<ViewHistoryIcon style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}} />} />
   </YoStyled>
 }
 
