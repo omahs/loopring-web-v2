@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 export interface GatewayItemQRCode {
   key: string;
   imgSrc: string;
@@ -21,4 +23,12 @@ export type ModalQRCodeProps = QRCodeProps & {
   onClose: {
     bivarianceHack(event: {}, reason: "backdropClick" | "escapeKeyDown"): void;
   }["bivarianceHack"];
+};
+export type AModalProps = {
+  open: boolean;
+  onClose: {
+    bivarianceHack(event: {}, reason: "backdropClick" | "escapeKeyDown"): void;
+  }["bivarianceHack"];
+  title: ReactNode;
+  body: ReactNode;
 };
