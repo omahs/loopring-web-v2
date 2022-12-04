@@ -14,16 +14,19 @@ import {
   subMenuGuardian,
   ViewHistoryIcon,
 } from "@loopring-web/common-resources";
-import { Box, Button, Link, Typography } from "@mui/material";
+import { Box, Button, Grid, Link, Typography } from "@mui/material";
 import {
   AModal,
+  EmptyDefault,
   GuardianStep,
+  ModalCloseButton,
   ModalQRCode,
   SubMenu,
   SubMenuList,
+  SwitchPanelStyled,
   useSettings,
 } from "@loopring-web/component-lib";
-import { useAccount, BtnConnectL1, StylePaper } from "@loopring-web/core";
+import { useAccount, BtnConnectL1, StylePaper, LoopringAPI } from "@loopring-web/core";
 import { useRouteMatch } from "react-router-dom";
 import { useHebaoMain } from "./hook";
 import { ModalLock } from "./modal";
@@ -32,7 +35,9 @@ import { WalletValidationInfo } from "./WalletValidationInfo";
 import { WalletProtector } from "./WalletProtector";
 import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
-import { Protector } from "@loopring-web/loopring-sdk";
+import { Guardian, HebaoOperationLog, Protector } from "@loopring-web/loopring-sdk";
+
+const VCODE_UNIT = 6;
 
 const WrongStatusStyled = styled(Box)`
   display: flex;
@@ -40,25 +45,25 @@ const WrongStatusStyled = styled(Box)`
   flex-direction: column;
   width: 100%;
   align-items: center;
-  padding: ${({theme}) => theme.unit * 10}px auto;
-  background-color: ${({theme}) => theme.colorBase.box};
+  padding: ${({ theme }) => theme.unit * 10}px auto;
+  background-color: ${({ theme }) => theme.colorBase.box};
   .logo{
-    width: ${({theme}) => theme.unit * 8}px;
-    height: ${({theme}) => theme.unit * 8}px;
-    margin-bottom: ${({theme}) => theme.unit * 8}px;
+    width: ${({ theme }) => theme.unit * 8}px;
+    height: ${({ theme }) => theme.unit * 8}px;
+    margin-bottom: ${({ theme }) => theme.unit * 8}px;
   }
   .content{
     text-align: center;
-    color: ${({theme}) => theme.colorBase.textSecondary};
-    width: ${({theme}) => theme.unit * 50}px;
-    margin-bottom: ${({theme}) => theme.unit * 8}px;
+    color: ${({ theme }) => theme.colorBase.textSecondary};
+    width: ${({ theme }) => theme.unit * 50}px;
+    margin-bottom: ${({ theme }) => theme.unit * 8}px;
   }
   .button{
-    color: ${({theme}) => theme.colorBase.textSecondary};
+    color: ${({ theme }) => theme.colorBase.textSecondary};
   }
 `
 
-const WrongStatus = ({ logo, content, onClickDisconnect }: { logo: string, content: string, onClickDisconnect: MouseEventHandler}) => {
+const WrongStatus = ({ logo, content, onClickDisconnect }: { logo: string, content: string, onClickDisconnect: MouseEventHandler }) => {
   return <WrongStatusStyled>
     <img className={"logo"} src={logo} />
     <Typography className={"content"}>
@@ -74,26 +79,26 @@ const WrongStatus = ({ logo, content, onClickDisconnect }: { logo: string, conte
 }
 
 const SectionStyled = styled(Box)`
-  padding: ${({theme}) => theme.unit * 4}px;
+  padding: ${({ theme }) => theme.unit * 4}px;
   padding-top: auto;
   padding-bottom: auto;
-  background: ${({theme}) => theme.colorBase.box};
-  margin-bottom: ${({theme}) => theme.unit * 2}px;
-  width: ${({theme}) => theme.unit * 60}px;
-  height: ${({theme}) => theme.unit * 12}px;
+  background: ${({ theme }) => theme.colorBase.box};
+  margin-bottom: ${({ theme }) => theme.unit * 2}px;
+  width: ${({ theme }) => theme.unit * 60}px;
+  height: ${({ theme }) => theme.unit * 12}px;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
 `
 
-const Section = ({logo, title, description, onClick} : {logo: JSX.Element, title: string, description?: string, onClick: MouseEventHandler}) => {
+const Section = ({ logo, title, description, onClick }: { logo: JSX.Element, title: string, description?: string, onClick: MouseEventHandler }) => {
   return <>
     <SectionStyled onClick={onClick}>
-      <Box display={"flex"}  alignItems={"center"}>
+      <Box display={"flex"} alignItems={"center"}>
         {logo}
         <Box paddingLeft={3}>
-          <Typography variant={"h4"}>{title}</Typography> 
+          <Typography variant={"h4"}>{title}</Typography>
           {description && <Typography color={"var(--color-text-third) "}>{description}</Typography>}
         </Box>
       </Box>
@@ -102,18 +107,13 @@ const Section = ({logo, title, description, onClick} : {logo: JSX.Element, title
   </>
 }
 
-// const WalletProtectorStyled = styled(Box)`
-//   display: flex; 
-//   justify-content: space-between;
-// `
-// WalletProtectors
 const WalletProtectors = ({ protectorList }: { protectorList: Protector[] }) => {
   return <>
     {protectorList.map(x => <>
       <Box display={"flex"} alignItems={"center"} justifyContent={"space-between"} marginBottom={4}>
         <Box>
           {/* todo: Unknown translation */}
-          <Typography variant={"h6"}>{x.ens ? x.ens : 'Unknown'}</Typography> 
+          <Typography variant={"h6"}>{x.ens ? x.ens : 'Unknown'}</Typography>
           <Typography color={"var(--color-text-third)"}>{x.address}</Typography>
         </Box>
         <Button variant={"outlined"} size={"medium"} color={"secondary"}>Lock Wallet</Button>
@@ -122,19 +122,97 @@ const WalletProtectors = ({ protectorList }: { protectorList: Protector[] }) => 
   </>
 }
 
-const RqeusetApprovals = ({ protectorList }: { protectorList: Protector[] }) => {
-  return <>
-    {protectorList.map(x => <>
-      <Box display={"flex"} alignItems={"center"} justifyContent={"space-between"} marginBottom={4}>
-        <Box>
-          {/* todo: Unknown translation */}
-          <Typography variant={"h6"}>{x.ens ? x.ens : 'Unknown'}</Typography> 
-          <Typography color={"var(--color-text-third)"}>{x.address}</Typography>
+const RqeusetApprovals = ({ guardiansList, t }: { guardiansList: Guardian[] } & WithTranslation) => {
+  return guardiansList.length !== 0 ? <>
+    {guardiansList.map((guardian, index) => {
+      return (
+        <Box
+          key={guardian.address + index}
+          display={"flex"}
+          alignItems={"center"}
+          justifyContent={"space-between"}
+          marginBottom={4}
+        >
+          <Box>
+            <Typography variant={"h6"}>Request for Wallet Recovery</Typography>
+            <Typography variant={"h6"}>
+              {/* todo: Unknown translation */}
+              {guardian.ens ? guardian.ens : 'Unknown'} /
+              <Typography component={"span"} color={"var(--color-text-third)"}>{guardian.address && `${guardian.address.slice(0, 6)}...${guardian.address.slice(guardian.address.length - 4,)}`}</Typography>
+            </Typography>
+          </Box>
+          <Box>
+            <Box display={"inline-block"} marginRight={2}><Button variant={"outlined"} size={"medium"}>Approve</Button></Box>
+
+            <Button variant={"outlined"} size={"medium"}>Reject</Button>
+          </Box>
         </Box>
-        <Button variant={"outlined"} size={"medium"} color={"secondary"}>Lock Wallet</Button>
-      </Box>
-    </>)}
-  </>
+      );
+    })}
+  </> : (
+    <Box flex={1} height={"100%"} width={"100%"}>
+      <EmptyDefault
+        style={{ alignSelf: "center" }}
+        height={"100%"}
+        message={() => (
+          <Box
+            flex={1}
+            display={"flex"}
+            alignItems={"center"}
+            justifyContent={"center"}
+          >
+            {/* {t("labelNoContent")} */}
+          </Box>
+        )}
+      />
+    </Box>
+  )
+}
+const History = ({ operationLogList, t }: { operationLogList: HebaoOperationLog[] } & WithTranslation) => {
+  return operationLogList.length !== 0 ? <>
+    {operationLogList.map((log, index) => {
+      return (
+        <Box
+          key={log.id}
+          display={"flex"}
+          alignItems={"center"}
+          justifyContent={"space-between"}
+          marginBottom={4}
+        >
+          <Box>
+            <Typography variant={"h6"}>{log.hebaoTxType}</Typography>
+            <Typography variant={"h6"}>
+              {/* todo: Unknown translation */}
+              {log.ens ? log.ens : 'Unknown'} /
+              <Typography component={"span"} color={"var(--color-text-third)"}>{log.address && `${log.address.slice(0, 6)}...${log.address.slice(log.address.length - 4,)}`}</Typography>
+            </Typography>
+          </Box>
+          <Box>
+            <Box display={"inline-block"} marginRight={2}><Button variant={"outlined"} size={"medium"}>Approve</Button></Box>
+
+            <Button variant={"outlined"} size={"medium"}>Reject</Button>
+          </Box>
+        </Box>
+      );
+    })}
+  </> : (
+    <Box flex={1} height={"100%"} width={"100%"}>
+      <EmptyDefault
+        style={{ alignSelf: "center" }}
+        height={"100%"}
+        message={() => (
+          <Box
+            flex={1}
+            display={"flex"}
+            alignItems={"center"}
+            justifyContent={"center"}
+          >
+            {t("labelNoContent")}
+          </Box>
+        )}
+      />
+    </Box>
+  )
 }
 
 const YoStyled = styled(Box)`
@@ -143,55 +221,180 @@ const YoStyled = styled(Box)`
   flex-direction: column;
   width: 100%;
   align-items: center;
-  padding: ${({theme}) => theme.unit * 10}px auto;
-  /* background-color: ${({theme}) => theme.colorBase.box}; */
+  padding: ${({ theme }) => theme.unit * 10}px auto;
+  /* background-color: ${({ theme }) => theme.colorBase.box}; */
   /* .logo{
-    width: ${({theme}) => theme.unit * 8}px;
-    height: ${({theme}) => theme.unit * 8}px;
-    margin-bottom: ${({theme}) => theme.unit * 8}px;
+    width: ${({ theme }) => theme.unit * 8}px;
+    height: ${({ theme }) => theme.unit * 8}px;
+    margin-bottom: ${({ theme }) => theme.unit * 8}px;
   }
   .content{
     text-align: center;
-    color: ${({theme}) => theme.colorBase.textSecondary};
-    width: ${({theme}) => theme.unit * 50}px;
-    margin-bottom: ${({theme}) => theme.unit * 8}px;
+    color: ${({ theme }) => theme.colorBase.textSecondary};
+    width: ${({ theme }) => theme.unit * 50}px;
+    margin-bottom: ${({ theme }) => theme.unit * 8}px;
   }
   .button{
-    color: ${({theme}) => theme.colorBase.textSecondary};
+    color: ${({ theme }) => theme.colorBase.textSecondary};
   } */
 `
 
 const Yo = () => {
   return <YoStyled marginTop={2}>
-    <Section onClick={() => {}} title={"Set as Guardian"} logo={<RoundAddIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}}  />} />
-    <Section description={"Who I Protect"} onClick={() => {}} title={"Lock/unlock Wallet"}  logo={<LockIcon2 htmlColor="var(--color-text-primary)" style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}}/>} />
-    <Section description={"Guardian Request Handling"} onClick={() => {}} title={"Approve Requests"} logo={<ApprovalIcon htmlColor="var(--color-text-primary)" style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}} />} />
-    <Section description={"Guardian Handling Records"} onClick={() => {}} title={"View History"} logo={<ViewHistoryIcon htmlColor="var(--color-text-primary)" style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}} />} />
+    <Section onClick={() => { }} title={"Set as Guardian"} logo={<RoundAddIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
+    <Section description={"Who I Protect"} onClick={() => { }} title={"Lock/unlock Wallet"} logo={<LockIcon2 htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
+    <Section description={"Guardian Request Handling"} onClick={() => { }} title={"Approve Requests"} logo={<ApprovalIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
+    <Section description={"Guardian Handling Records"} onClick={() => { }} title={"View History"} logo={<ViewHistoryIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
   </YoStyled>
 }
+
+const InputCodeStyle = styled(Box)`
+  margin-bottom: ${({ theme }) => theme.unit * 11}px;
+  .code-input {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+  }
+
+  //.code-label {
+  //  margin-bottom: 16px;
+  //}
+  //.code-inputs {
+  //  display: flex;
+  //  justify-content: start;
+  //  align-items: center;
+  //}
+  .code-inputs input {
+    border: none;
+    color: var(--color-text-third);
+    background-color: var(--field-opacity);
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    text-align: center;
+    height: 60px;
+    width: 40px;
+    border-radius: 4px;
+    margin: 0 4px;
+    border: 1px solid var(--color-border);
+    font-size: 38px;
+  }
+  .code-inputs input:focus {
+    outline: none;
+  }
+  .code-inputs input:first-of-type {
+    margin-left: 24px;
+  }
+  .code-inputs input:nth-of-type(3n) {
+    margin-right: 24px;
+  }
+` as typeof Box;
+
+const InputCode = ({
+  length,
+  loading,
+  onComplete,
+}: {
+  length: number;
+  loading: boolean;
+  onComplete: (code: string) => void;
+}) => {
+  const [code, setCode] = React.useState([...Array(length)].map(() => ""));
+  const inputs = React.useRef([]);
+  // Typescript
+  // useRef<(HTMLInputElement | null)[]>([])
+
+  const processInput = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    slot: number
+  ) => {
+    const num = e.target.value;
+    if (/[^0-9]/.test(num)) return;
+    const newCode = [...code];
+    newCode[slot] = num;
+    setCode(newCode);
+    if (slot !== length - 1) {
+      // @ts-ignore
+      inputs.current[slot + 1].focus();
+    }
+    if (newCode.every((num) => num !== "")) {
+      onComplete(newCode.join(""));
+    }
+  };
+
+  const onKeyUp = (e: React.KeyboardEvent<HTMLInputElement>, slot: number) => {
+    if (e.keyCode === 8 && !code[slot] && slot !== 0) {
+      const newCode = [...code];
+      newCode[slot - 1] = "";
+      setCode(newCode);
+      // @ts-ignore
+      inputs.current[slot - 1].focus();
+    }
+  };
+
+  return (
+    <InputCodeStyle
+      className="code-input"
+      display={"flex"}
+      flexDirection={"column"}
+      alignItems={"center"}
+    >
+      {/*<label className="code-label">{label}</label>*/}
+      <Box
+        className="code-inputs"
+        display={"flex"}
+        justifyContent={"start"}
+        alignItems={"center"}
+      >
+        {code.map((num, idx) => {
+          return (
+            <input
+              key={idx}
+              type="text"
+              inputMode="numeric"
+              maxLength={1}
+              value={num}
+              autoFocus={!code[0].length && idx === 0}
+              readOnly={loading}
+              onChange={(e) => processInput(e, idx)}
+              onKeyUp={(e) => onKeyUp(e, idx)}
+              // @ts-ignore
+              ref={(ref) => ref && inputs.current.push(ref)}
+            />
+          );
+        })}
+      </Box>
+    </InputCodeStyle>
+  );
+};
+
 
 export const GuardianPage = withTranslation(["common"])(
   ({ t, ..._rest }: WithTranslation) => {
     const { account } = useAccount();
     let match = useRouteMatch("/guardian/:item");
     const [openQRCode, setOpenQRCode] = React.useState(false);
-    const onOpenAdd = React.useCallback((open :boolean) => {
+    const onOpenAdd = React.useCallback((open: boolean) => {
       setOpenQRCode(open);
     }, []);
     const [showHistory, setShowHistory] = React.useState(false);
-    const onOpenHistory = React.useCallback((open :boolean) => {
+    const onOpenHistory = React.useCallback((open: boolean) => {
       setShowHistory(open);
     }, []);
     const [showApprovalRequests, setShowApprovalRequests] = React.useState(false);
-    const onOpenApprovalRequests = React.useCallback((open :boolean) => {
+    const onOpenApprovalRequests = React.useCallback((open: boolean) => {
       setShowApprovalRequests(open);
     }, []);
 
     const [showLockWallet, setShowLockWallet] = React.useState(false);
-    const onOpenLockWallet = React.useCallback((open :boolean) => {
+    const onOpenLockWallet = React.useCallback((open: boolean) => {
       setShowLockWallet(open);
     }, []);
-    
+    const [showCodeInput, setShowCodeInput] = React.useState(false);
+    const onOpenCodeInput = React.useCallback((open: boolean) => {
+      setShowCodeInput(open);
+    }, []);
+
     // const openQRCode = match?.params['item'] === 'add-guardian';
     // if (match?.params?['item'] === 'add-guardian') {
     //   openQRCode
@@ -226,15 +429,15 @@ export const GuardianPage = withTranslation(["common"])(
       isContractAddress,
     } = useHebaoMain();
     // address
-// : 
-// "0x2bbb00232bead228973528dc7590fcb366bb9856"
-// ens
-// : 
-// "testtest.loopring.eth"
-// lockStatus
-// : 
-// "LOCKED"
-// protectList[0].
+    // : 
+    // "0x2bbb00232bead228973528dc7590fcb366bb9856"
+    // ens
+    // : 
+    // "testtest.loopring.eth"
+    // lockStatus
+    // : 
+    // "LOCKED"
+    // protectList[0].
     console.log('protectList', protectList)
     const handleOpenModal = ({
       step,
@@ -390,45 +593,45 @@ export const GuardianPage = withTranslation(["common"])(
         case AccountStatus.NOT_ACTIVE:
         case AccountStatus.DEPOSITING:
         case AccountStatus.ACTIVATED:
-          return isSmartContractWallet 
-          ?  <WrongStatus 
+          return isSmartContractWallet
+            ? <WrongStatus
               logo={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"}
               content={"The connected wallet is a Loopring Smart Wallet. Please use your Loopring Wallet mobile app to add Guardians."}
               onClickDisconnect={() => {
 
               }}
             />
-          : (
-            <>
-              <Box
-                width={"200px"}
-                display={"flex"}
-                justifyContent={"stretch"}
-                marginRight={3}
-                marginBottom={2}
-                className={"MuiPaper-elevation2"}
-              >
-                <SubMenu>
-                  <SubMenuList
-                    selected={selected}
-                    subMenu={subMenuGuardian as any}
-                  />
-                </SubMenu>
-              </Box>
-              <StylePaper
-                minHeight={420}
-                display={"flex"}
-                alignItems={"stretch"}
-                flexDirection={"column"}
-                marginTop={0}
-                flex={1}
-                marginBottom={2}
-                className={"MuiPaper-elevation2"}
-              >
-                {guardianRouter(isLoading)}
-              </StylePaper>
-            </>
-          );
+            : (
+              <>
+                <Box
+                  width={"200px"}
+                  display={"flex"}
+                  justifyContent={"stretch"}
+                  marginRight={3}
+                  marginBottom={2}
+                  className={"MuiPaper-elevation2"}
+                >
+                  <SubMenu>
+                    <SubMenuList
+                      selected={selected}
+                      subMenu={subMenuGuardian as any}
+                    />
+                  </SubMenu>
+                </Box>
+                <StylePaper
+                  minHeight={420}
+                  display={"flex"}
+                  alignItems={"stretch"}
+                  flexDirection={"column"}
+                  marginTop={0}
+                  flex={1}
+                  marginBottom={2}
+                  className={"MuiPaper-elevation2"}
+                >
+                  {guardianRouter(isLoading)}
+                </StylePaper>
+              </>
+            );
           break;
         case AccountStatus.ERROR_NETWORK:
           return (
@@ -462,7 +665,8 @@ export const GuardianPage = withTranslation(["common"])(
       isLoading,
       guardianRouter,
     ]);
-    
+    const theme = useTheme()
+
     return <>
       <ModalQRCode
         open={openQRCode}
@@ -520,7 +724,8 @@ export const GuardianPage = withTranslation(["common"])(
         body={<WalletProtectors protectorList={protectList}></WalletProtectors>}
       />
       <AModal
-        open={showApprovalRequests}
+        open={false}
+        // ={showApprovalRequests}
         onClose={() => onOpenApprovalRequests(false)}
         title={
           <Typography component={"p"} textAlign={"center"} marginBottom={1}>
@@ -542,13 +747,54 @@ export const GuardianPage = withTranslation(["common"])(
             </Typography>
           </Typography>
         }
-        body={<RqeusetApprovals protectorList={req}/>}
+        body={<RqeusetApprovals guardiansList={guardiansList} />}
       />
-      <ModalQRCode
-        open={showHistory}
-        fgColor={"#000"}
-        bgColor={"#fff"}
-        className={"guardianPop"}
+      <AModal
+        open={showCodeInput}
+        showBackButton
+        onBack={() => {alert('todo')}}
+        onClose={() => onOpenApprovalRequests(false)}
+        title={
+          <Typography component={"p"} textAlign={"center"} marginBottom={1}>
+            <Typography
+              color={"var(--color-text-primary)"}
+              component={"p"}
+              variant={"h4"}
+              marginBottom={2}
+            >
+              Large amount approval request
+            </Typography>
+            <Typography
+              color={"var(--color-text-secondary)"}
+              component={"p"}
+              variant={"body1"}
+              marginBottom={2}
+            >
+              todo
+            </Typography>
+          </Typography>
+        }
+        body={
+          <Box flexDirection={"column"} display={"flex"} alignItems={"center"}>
+            <InputCode
+              length={VCODE_UNIT}
+              // onComplete={submitApprove}
+              loading={false}
+
+            />
+            <Button
+              style={{
+                width: `${theme.unit * 39}px`
+              }}
+              variant={"contained"}
+
+            >Agree</Button>
+          </Box>
+        }
+      />
+      <AModal
+        open
+        // ={showHistory}
         onClose={() => onOpenHistory(false)}
         title={
           <Typography component={"p"} textAlign={"center"} marginBottom={1}>
@@ -562,29 +808,18 @@ export const GuardianPage = withTranslation(["common"])(
             </Typography>
           </Typography>
         }
-        size={260}
-        description={description()}
-        url={`ethereum:${account?.accAddress}?type=${account?.connectName}&action=HebaoAddGuardian`}
+        body={<History guardiansList={guardiansList}/>}
       />
       <YoStyled marginTop={2}>
-        <Section onClick={() => onOpenAdd(true)} title={"Set as Guardian"} logo={<RoundAddIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}}  />} />
-        <Section description={"Who I Protect"} onClick={() => onOpenLockWallet(true)} title={"Lock/unlock Wallet"}  logo={<LockIcon2 htmlColor="var(--color-text-primary)" style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}}/>} />
-        <Section description={"Guardian Request Handling"} onClick={() => onOpenApprovalRequests(true)} title={"Approve Requests"} logo={<ApprovalIcon htmlColor="var(--color-text-primary)" style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}} />} />
-        <Section description={"Guardian Handling Records"} onClick={() => onOpenHistory(true)} title={"View History"} logo={<ViewHistoryIcon htmlColor="var(--color-text-primary)" style={{width: "var(--svg-size-cover)", height: "var(--svg-size-cover)"}} />} />
+        <Section onClick={() => onOpenAdd(true)} title={"Set as Guardian"} logo={<RoundAddIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
+        <Section description={"Who I Protect"} onClick={() => onOpenLockWallet(true)} title={"Lock/unlock Wallet"} logo={<LockIcon2 htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
+        <Section description={"Guardian Request Handling"} onClick={() => onOpenApprovalRequests(true)} title={"Approve Requests"} logo={<ApprovalIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
+        <Section description={"Guardian Handling Records"} onClick={() => onOpenHistory(true)} title={"View History"} logo={<ViewHistoryIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
       </YoStyled>
       {/* <Yo /> */}
     </>
-    
-    // return (
-    //   <WrongStatus
-    //     content={"The connected wallet is a Loopring Smart Wallet. Please use your Loopring Wallet mobile app to add Guardians."}
-    //     logo={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"}
-    //     onClickDisconnect={() => {
 
-    //     }}
-    //   />
-    // )
-    
+
     return (
       <>
         <ModalQRCode
@@ -632,10 +867,10 @@ export const GuardianPage = withTranslation(["common"])(
           }}
         />
         <>
-        
-        {
-        viewTemplate
-        }
+
+          {
+            viewTemplate
+          }
         </>
       </>
     );
