@@ -1474,3 +1474,11 @@ export const RightIcon = (props: SvgIconProps) => {
     </SvgIcon>
   );
 };
+export const LeftIcon = (props: SvgIconProps) => {
+  return (    
+    <SvgIcon {...props} viewBox="0 0 10 18" aria-hidden="true">
+      <path d="M8.5351 0.514648L0.0500489 8.99965L8.5351 17.4846L9.95011 16.0706L2.87807 8.99965L9.95011 1.92865L8.5351 0.514648Z" fill="#A3A8CA"/>
+
+    </SvgIcon>
+  );
+};

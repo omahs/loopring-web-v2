@@ -31,4 +31,6 @@ export type AModalProps = {
   }["bivarianceHack"];
   title: ReactNode;
   body: ReactNode;
+  onBack?: () => void;
+  showBackButton?: boolean;
 };

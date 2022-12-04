@@ -3,7 +3,7 @@ import QRCode, { BaseQRCodeProps } from "qrcode.react";
 import styled from "@emotion/styled";
 import { Box, Modal, Typography } from "@mui/material";
 import { AModalProps, ModalQRCodeProps, QRCodeProps } from "./Interface";
-import { ModalCloseButton } from "../../basic-lib";
+import { ModalBackButton, ModalCloseButton } from "../../basic-lib";
 import { ReactNode } from "react";
 
 const ModalContentStyled = styled(Box)`
@@ -164,6 +164,8 @@ export const AModal = withTranslation("common")(
     open,
     body,
     title,
+    onBack,
+    showBackButton,
     t
   }: AModalProps & WithTranslation) => {
     return (
@@ -186,6 +188,7 @@ export const AModal = withTranslation("common")(
             display={"flex"}
             flexDirection={"column"}
           >
+            {showBackButton && <ModalBackButton onBack={onBack}/>}
             <ModalCloseButton onClose={onClose} t={t} />
             <Box
               display={"flex"}
