@@ -14,11 +14,12 @@ import {
   RightArrowIcon,
   RightIcon,
   RoundAddIcon,
+  SDK_ERROR_MAP_TO_UI,
   SoursURL,
   subMenuGuardian,
   ViewHistoryIcon,
 } from "@loopring-web/common-resources";
-import { Box, Button, Grid, IconButton, Link, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Grid, IconButton, Link, Modal, Tooltip, Typography } from "@mui/material";
 import {
   AModal,
   EmptyDefault,
@@ -31,7 +32,7 @@ import {
   SwitchPanelStyled,
   useSettings,
 } from "@loopring-web/component-lib";
-import { useAccount, BtnConnectL1, StylePaper, LoopringAPI } from "@loopring-web/core";
+import { useAccount, BtnConnectL1, StylePaper, LoopringAPI, useSystem } from "@loopring-web/core";
 import { useRouteMatch } from "react-router-dom";
 import { TxHebaoAction, useHebaoMain } from "./hook";
 import { ModalLock } from "./modal";
@@ -42,6 +43,9 @@ import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
 import { Guardian, HebaoOperationLog, HEBAO_LOCK_STATUS, Protector } from "@loopring-web/loopring-sdk";
 import moment from "moment";
+import * as sdk from "@loopring-web/loopring-sdk";
+import { connectProvides } from "@loopring-web/web3-provider";
+import Web3 from "web3";
 
 const VCODE_UNIT = 6;
 
@@ -113,23 +117,6 @@ const Section = ({ logo, title, description, onClick }: { logo: JSX.Element, tit
   </>
 }
 
-// const handleOpenModal = ({
-//   step,
-//   options,
-// }: {
-//   step: GuardianStep;
-//   options?: any;
-// }) => {
-//   setOpenHebao((state) => {
-//     state.isShow = true;
-//     state.step = step;
-//     state.options = {
-//       ...state.options,
-//       ...options,
-//     };
-//     return { ...state };
-//   });
-// };
 const WalletProtectors = ({ protectorList, handleOpenModal, loadData, guardianConfig}: { 
   protectorList: Protector[];
   handleOpenModal: (info: {step: GuardianStep, options?: any}) => void;
@@ -158,7 +145,7 @@ const WalletProtectors = ({ protectorList, handleOpenModal, loadData, guardianCo
 
     const StatusView = ({ status, onClickLock }: {status: HEBAO_LOCK_STATUS, onClickLock: () => void}) => {
       // lockStatus = "UNLOCK_WAITING"
-      switch ("CREATED") {
+      switch (status) {
         case "UNLOCK_FAILED":
         case "LOCKED":
           return (
@@ -225,6 +212,7 @@ const WalletProtectors = ({ protectorList, handleOpenModal, loadData, guardianCo
               {t("labelLock")}
             </Button>
           );
+        default: return <></>
       }
     }
     const { onLock } = useHebaoProtector({
@@ -259,52 +247,298 @@ const WalletProtectors = ({ protectorList, handleOpenModal, loadData, guardianCo
   
 }
 
-const RqeusetApprovals = ({ guardiansList }: { guardiansList: Guardian[] }) => {
+const RqeusetApprovals = ({ 
+  guardiansList,
+  loadData,
+  // onOpenAdd,
+  guardianConfig,
+  isContractAddress,
+  handleOpenModal,
+}: { 
+  guardiansList: Guardian[] 
+  guardianConfig: any;
+  isContractAddress: boolean;
+  loadData: () => Promise<void>;
+  // onOpenAdd: () => void;
+  handleOpenModal: (props: { step: GuardianStep; options?: any }) => void;
+  
+}) => {
   const {t} = useTranslation();
-  return guardiansList.length !== 0 ? <>
-    {guardiansList.map((guardian, index) => {
-      return (
-        <Box
-          key={guardian.address + index}
-          display={"flex"}
-          alignItems={"center"}
-          justifyContent={"space-between"}
-          marginBottom={4}
-        >
-          <Box>
-            <Typography variant={"h6"}>Request for Wallet Recovery</Typography>
-            <Typography variant={"h6"}>
-              {/* todo: Unknown translation */}
-              {guardian.ens ? guardian.ens : 'Unknown'} /
-              <Typography component={"span"} color={"var(--color-text-third)"}>{guardian.address && `${guardian.address.slice(0, 6)}...${guardian.address.slice(guardian.address.length - 4,)}`}</Typography>
-            </Typography>
-          </Box>
-          <Box>
-            <Box display={"inline-block"} marginRight={2}><Button variant={"outlined"} size={"medium"}>Approve</Button></Box>
+  const { account } = useAccount();
+  const { chainId } = useSystem();
+  const [isFirstTime, setIsFirstTime] = React.useState<boolean>(true);
+  const [selected, setSelected] = React.useState<Guardian | undefined>();
+  const [openCode, setOpenCode] = React.useState(false);
+  const [notSupportOpen, setNotSupportOpen] = React.useState(false);
+  // const [openCode, setOpenCode] = React.useState(false);
+  const submitApprove = async (code: string, selected: Guardian) => {
+    setOpenCode(false);
+    handleOpenModal({
+      step: GuardianStep.Approve_WaitForAuth,
+      options: {
+        approveRetry: () => {
+          submitApprove(code, selected);
+        },
+      },
+    });
+    if (LoopringAPI.walletAPI && selected) {
+      const { contractType } = await LoopringAPI.walletAPI.getContractType({
+        wallet: selected.address,
+      });
+      let isContract1XAddress = undefined,
+        guardianModuleAddress = undefined,
+        guardians = undefined;
+      if (contractType && contractType.contractVersion?.startsWith("V1_")) {
+        isContract1XAddress = true;
+        // const { walletModule } = await LoopringAPI.walletAPI.getWalletModules({
+        //   wallet: selected.address,
+        // });
+        const walletModule = guardianConfig?.supportContracts?.find(
+          (item: any) => {
+            return item.contractName === "GUARDIAN_MODULE";
+          }
+        );
+        guardianModuleAddress = walletModule?.contractAddress;
+      } else if (contractType && contractType.walletType === 0) {
+        guardians = [];
+      }
+      const request: sdk.ApproveSignatureRequest = {
+        approveRecordId: selected.id,
+        txAwareHash: selected.messageHash,
+        securityNumber: code,
+        signer: account.accAddress,
+        signature: "",
+      };
 
-            <Button variant={"outlined"} size={"medium"}>Reject</Button>
+      LoopringAPI.walletAPI
+        .submitApproveSignature(
+          {
+            request: request,
+            guardian: selected,
+            web3: connectProvides.usedWeb3 as unknown as Web3,
+            chainId: chainId as any,
+            eddsaKey: "",
+            apiKey: "",
+            isHWAddr: !isFirstTime,
+            walletType: account.connectName as any,
+          },
+          guardians,
+          isContract1XAddress,
+          contractType?.masterCopy ?? undefined,
+          guardianModuleAddress ?? undefined
+        )
+        .then((response) => {
+          if (
+            (response as sdk.RESULT_INFO).code ||
+            (response as sdk.RESULT_INFO).message
+          ) {
+            handleOpenModal({
+              step: GuardianStep.Approve_Failed,
+              options: {
+                error: response,
+              },
+            });
+          } else {
+            handleOpenModal({
+              step: GuardianStep.Approve_Success,
+            });
+            loadData();
+          }
+        })
+        .catch((error: any) => {
+          setIsFirstTime((state) => !state);
+          const errorItem = SDK_ERROR_MAP_TO_UI[error?.code ?? 700001];
+          handleOpenModal({
+            step: GuardianStep.Approve_Failed,
+            options: {
+              error: errorItem
+                ? t(errorItem.messageKey, { ns: "error" })
+                : error.message,
+            },
+          });
+        });
+    }
+  };
+  const handleReject = (guardian: Guardian) => {
+    handleOpenModal({
+      step: GuardianStep.Reject_WaitForAuth,
+      options: {
+        approveRetry: () => {
+          handleReject(guardian);
+        },
+      },
+    });
+    if (LoopringAPI.walletAPI && guardian) {
+      const request = {
+        approveRecordId: guardian.id,
+        signer: account.accAddress,
+      };
+      LoopringAPI.walletAPI
+        .rejectHebao({
+          request,
+          web3: connectProvides.usedWeb3 as unknown as Web3,
+          address: account.accAddress,
+          chainId: chainId as any,
+          guardiaContractAddress: guardian.address,
+          walletType: account.connectName as any,
+        })
+        .then((response) => {
+          if (
+            (response as sdk.RESULT_INFO).code ||
+            (response as sdk.RESULT_INFO).message
+          ) {
+            handleOpenModal({
+              step: GuardianStep.Reject_Failed,
+              options: {
+                error: response,
+              },
+            });
+          } else {
+            handleOpenModal({
+              step: GuardianStep.Approve_Success,
+            });
+            loadData();
+          }
+        })
+        .catch((error: any) => {
+          const errorItem = SDK_ERROR_MAP_TO_UI[error?.code ?? 700001];
+          handleOpenModal({
+            step: GuardianStep.Approve_Failed,
+            options: {
+              error: errorItem
+                ? t(errorItem.messageKey, { ns: "error" })
+                : error.message,
+            },
+          });
+        });
+    }
+  };
+  const handleOpenApprove = (guardian: Guardian) => {
+    if (isContractAddress && guardian.type !== "recovery") {
+      setNotSupportOpen(true);
+      return;
+    }
+    setOpenCode(true);
+    setSelected(guardian);
+  };
+  return <>
+    <Modal open={openCode} onClose={() => setOpenCode(false)}>
+      <SwitchPanelStyled>
+        <Box display={"flex"} flexDirection={"column"}>
+          <ModalCloseButton onClose={() => setOpenCode(false)} t={t as any} />
+          <Typography
+            component={"p"}
+            textAlign={"center"}
+            marginBottom={2}
+            paddingX={2}
+          >
+            <Typography
+              color={"var(--color-text-primary)"}
+              component={"p"}
+              variant={"h4"}
+              marginBottom={2}
+            >
+              {t("labelWalletInputGuardianCode")}
+            </Typography>
+            <Typography
+              color={"var(--color-text-secondary)"}
+              component={"p"}
+              variant={"body1"}
+              marginBottom={2}
+            >
+              {t("labelWalletInputGuardianCodeDes")}
+            </Typography>
+          </Typography>
+          <Box paddingBottom={3}>
+            <Box
+              display={"flex"}
+              alignItems={"center"}
+              justifyContent={"center"}
+            >
+              <InputCode
+                length={VCODE_UNIT}
+                onComplete={(code) => submitApprove(code, selected!)}
+                loading={false}
+              />
+            </Box>
+            <Box
+              display={"flex"}
+              marginTop={4}
+              marginX={2}
+              justifyContent={"center"}
+            >
+              <Button
+                fullWidth
+                variant={"contained"}
+                size={"small"}
+                color={"primary"}
+                onClick={() => setOpenCode(false)}
+              >
+                <Typography paddingX={2}> {t("labelCancel")}</Typography>
+              </Button>
+            </Box>
           </Box>
         </Box>
-      );
-    })}
-  </> : (
-    <Box flex={1} height={"100%"} width={"100%"}>
-      <EmptyDefault
-        style={{ alignSelf: "center" }}
-        height={"100%"}
-        message={() => (
-          <Box
-            flex={1}
-            display={"flex"}
-            alignItems={"center"}
-            justifyContent={"center"}
-          >
-            {t("labelNoContent")}
-          </Box>
-        )}
-      />
-    </Box>
-  )
+      </SwitchPanelStyled>
+    </Modal>
+    {
+      guardiansList.length !== 0 ? <>
+
+        {guardiansList.map((guardian, index) => {
+          return (
+            <Box
+              key={guardian.address + index}
+              display={"flex"}
+              alignItems={"center"}
+              justifyContent={"space-between"}
+              marginBottom={4}
+            >
+              <Box>
+                <Typography variant={"h6"}>Request for Wallet Recovery</Typography>
+                <Typography variant={"h6"}>
+                  {/* todo: Unknown translation */}
+                  {guardian.ens ? guardian.ens : 'Unknown'} /
+                  <Typography component={"span"} color={"var(--color-text-third)"}>{guardian.address && `${guardian.address.slice(0, 6)}...${guardian.address.slice(guardian.address.length - 4,)}`}</Typography>
+                </Typography>
+              </Box>
+              <Box>
+                <Box display={"inline-block"} marginRight={2}>
+                  <Button 
+                    variant={"outlined"} 
+                    size={"medium"}
+                    onClick={() => {
+                      handleOpenApprove(guardian)
+                    }}
+                  >
+                      Approve
+                  </Button>
+                </Box>
+                <Button onClick={() => handleReject(guardian)} variant={"outlined"} size={"medium"}>Reject</Button>
+              </Box>
+            </Box>
+          );
+        })}
+      </> : (
+        <Box flex={1} height={"100%"} width={"100%"}>
+          <EmptyDefault
+            style={{ alignSelf: "center" }}
+            height={"100%"}
+            message={() => (
+              <Box
+                flex={1}
+                display={"flex"}
+                alignItems={"center"}
+                justifyContent={"center"}
+              >
+                {t("labelNoContent")}
+              </Box>
+            )}
+          />
+        </Box>
+      )
+    }
+  </>
+  
 }
 const History = ({ operationLogList}: { operationLogList: HebaoOperationLog[] }) => {
   operationLogList = [
@@ -356,26 +590,10 @@ const History = ({ operationLogList}: { operationLogList: HebaoOperationLog[] })
 
 const YoStyled = styled(Box)`
   display: flex;
-  /* justify-content: center; */
   flex-direction: column;
   width: 100%;
   align-items: center;
   padding: ${({ theme }) => theme.unit * 10}px auto;
-  /* background-color: ${({ theme }) => theme.colorBase.box}; */
-  /* .logo{
-    width: ${({ theme }) => theme.unit * 8}px;
-    height: ${({ theme }) => theme.unit * 8}px;
-    margin-bottom: ${({ theme }) => theme.unit * 8}px;
-  }
-  .content{
-    text-align: center;
-    color: ${({ theme }) => theme.colorBase.textSecondary};
-    width: ${({ theme }) => theme.unit * 50}px;
-    margin-bottom: ${({ theme }) => theme.unit * 8}px;
-  }
-  .button{
-    color: ${({ theme }) => theme.colorBase.textSecondary};
-  } */
 `
 
 const Yo = () => {
@@ -394,15 +612,6 @@ const InputCodeStyle = styled(Box)`
     flex-direction: column;
     align-items: start;
   }
-
-  //.code-label {
-  //  margin-bottom: 16px;
-  //}
-  //.code-inputs {
-  //  display: flex;
-  //  justify-content: start;
-  //  align-items: center;
-  //}
   .code-inputs input {
     border: none;
     color: var(--color-text-third);
@@ -534,32 +743,6 @@ export const GuardianPage = withTranslation(["common"])(
       setShowCodeInput(open);
     }, []);
 
-    // const openQRCode = match?.params['item'] === 'add-guardian';
-    // if (match?.params?['item'] === 'add-guardian') {
-    //   openQRCode
-    // }
-    // const description = () => (
-      
-    //   // <Typography
-    //   //   marginTop={2}
-    //   //   component={"div"}
-    //   //   textAlign={"center"}
-    //   //   variant={"body2"}
-    //   // >
-    //   //   <Typography
-    //   //     color={"var(--color-text-secondary)"}
-    //   //     component={"p"}
-    //   //     variant={"inherit"}
-    //   //   >
-          
-    //   //     {account?.accAddress}
-    //   //     <IconButton>
-    //   //       <CopyIcon />
-    //   //     </IconButton>
-    //   //     {/* {account?.accAddress && `${account?.accAddress.slice(0,6)}...${account?.accAddress.slice(account?.accAddress.length - 4)}`} */}
-    //   //   </Typography>
-    //   // </Typography>
-    // );
     // @ts-ignore
     const selected = match?.params?.item ?? "myProtected";
     const {
@@ -573,17 +756,6 @@ export const GuardianPage = withTranslation(["common"])(
       isLoading,
       isContractAddress,
     } = useHebaoMain();
-    // address
-    // : 
-    // "0x2bbb00232bead228973528dc7590fcb366bb9856"
-    // ens
-    // : 
-    // "testtest.loopring.eth"
-    // lockStatus
-    // : 
-    // "LOCKED"
-    // protectList[0].
-    console.log('protectList', protectList)
     const handleOpenModal = ({
       step,
       options,
@@ -700,7 +872,7 @@ export const GuardianPage = withTranslation(["common"])(
       }
     };
     const { isMobile } = useSettings();
-    account.readyState = AccountStatus.UN_CONNECT
+    account.readyState = AccountStatus.ACTIVATED
     const viewTemplate = React.useMemo(() => {
       switch (account.readyState) {
         case AccountStatus.UN_CONNECT:
@@ -816,6 +988,98 @@ export const GuardianPage = withTranslation(["common"])(
     const onClickCopy = useCallback((str: string) => {
       copyToClipBoard(str)
     }, [])
+
+    switch (account.readyState) {
+      case AccountStatus.UN_CONNECT:
+        return (
+          <Box
+            flex={1}
+            display={"flex"}
+            justifyContent={"center"}
+            flexDirection={"column"}
+            alignItems={"center"}
+          >
+            <Typography
+              marginTop={3}
+              variant={isMobile ? "h4" : "h1"}
+              textAlign={"center"}
+            >
+              {t("describeTitleConnectToWalletAsGuardian")}
+            </Typography>
+
+            <Link
+              marginY={2}
+              variant={"body1"}
+              textAlign={"center"}
+              color={"textSecondary"}
+              target="_blank"
+              rel="noopener noreferrer"
+              href={"./#/document/walletdesign_en.md"}
+            >
+              {t("describeWhatIsGuardian")}
+            </Link>
+            <BtnConnectL1 />
+          </Box>
+        );
+        break;
+      case AccountStatus.LOCKED:
+      case AccountStatus.NO_ACCOUNT:
+      case AccountStatus.NOT_ACTIVE:
+      case AccountStatus.DEPOSITING:
+      case AccountStatus.ACTIVATED:
+        if ( isSmartContractWallet || true) {
+          return <WrongStatus
+            logo={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"}
+            content={"The connected wallet is a Loopring Smart Wallet. Please use your Loopring Wallet mobile app to add Guardians."}
+            onClickDisconnect={() => {
+              
+            }}
+          />
+        }
+        // return  isSmartContractWallet
+        //   ? <WrongStatus
+        //     logo={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"}
+        //     content={"The connected wallet is a Loopring Smart Wallet. Please use your Loopring Wallet mobile app to add Guardians."}
+        //     onClickDisconnect={() => {
+
+        //     }}
+        //   />
+        break;
+      default:
+        break;
+    }
+    // if (account.readyState === AccountStatus.UN_CONNECT) {
+    //   return (
+    //      <Box
+    //     flex={1}
+    //     display={"flex"}
+    //     justifyContent={"center"}
+    //     flexDirection={"column"}
+    //     alignItems={"center"}
+    //   >
+    //     <Typography
+    //       marginTop={3}
+    //       variant={isMobile ? "h4" : "h1"}
+    //       textAlign={"center"}
+    //     >
+    //       {t("describeTitleConnectToWalletAsGuardian")}
+    //     </Typography>
+
+    //     <Link
+    //       marginY={2}
+    //       variant={"body1"}
+    //       textAlign={"center"}
+    //       color={"textSecondary"}
+    //       target="_blank"
+    //       rel="noopener noreferrer"
+    //       href={"./#/document/walletdesign_en.md"}
+    //     >
+    //       {t("describeWhatIsGuardian")}
+    //     </Link>
+    //     <BtnConnectL1 />
+    //   </Box>
+    //   )
+    // } 
     return <>
       {/* <ModalQRCode
         open={openQRCode}
@@ -965,7 +1229,8 @@ export const GuardianPage = withTranslation(["common"])(
         }
       />
       <AModal
-        open={showApprovalRequests}
+        open
+        ={showApprovalRequests}
         onClose={() => onOpenApprovalRequests(false)}
         title={
           <Typography component={"p"} textAlign={"center"} marginBottom={1}>
@@ -987,7 +1252,7 @@ export const GuardianPage = withTranslation(["common"])(
             </Typography>
           </Typography>
         }
-        body={<RqeusetApprovals guardiansList={guardiansList} />}
+        body={<RqeusetApprovals isContractAddress={isContractAddress} loadData={loadData} guardianConfig={guardianConfig}  handleOpenModal={handleOpenModal}  guardiansList={guardiansList} />}
       />
       <AModal
         open={showCodeInput}
@@ -1067,7 +1332,6 @@ export const GuardianPage = withTranslation(["common"])(
         <Section description={"Guardian Request Handling"} onClick={() => onOpenApprovalRequests(true)} title={"Approve Requests"} logo={<ApprovalIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
         <Section description={"Guardian Handling Records"} onClick={() => onOpenHistory(true)} title={"View History"} logo={<ViewHistoryIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
       </YoStyled>
-      {/* <Yo /> */}
     </>
 
 
