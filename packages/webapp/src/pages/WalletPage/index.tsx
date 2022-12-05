@@ -1,16 +1,19 @@
 import { useTranslation, WithTranslation, withTranslation } from "react-i18next";
-import React, { MouseEventHandler, useCallback } from "react";
+import React, { MouseEventHandler, ReactNode, useCallback } from "react";
 import {
   AccountStatus,
   AddIcon,
+  AlertIcon,
   ApprovalIcon,
   CopyIcon,
   copyToClipBoard,
+  ErrorIcon,
   ExitIcon,
   HelpIcon,
   LoadingIcon,
   LockIcon,
   LockIcon2,
+  RefuseIcon,
   RightArrowIcon,
   RightIcon,
   RoundAddIcon,
@@ -58,8 +61,8 @@ const WrongStatusStyled = styled(Box)`
   padding: ${({ theme }) => theme.unit * 10}px auto;
   background-color: ${({ theme }) => theme.colorBase.box};
   .logo{
-    width: ${({ theme }) => theme.unit * 8}px;
-    height: ${({ theme }) => theme.unit * 8}px;
+    /* width: ${({ theme }) => theme.unit * 8}px;
+    height: ${({ theme }) => theme.unit * 8}px; */
     margin-bottom: ${({ theme }) => theme.unit * 8}px;
   }
   .content{
@@ -73,9 +76,11 @@ const WrongStatusStyled = styled(Box)`
   }
 `
 
-const WrongStatus = ({ logo, content, onClickDisconnect }: { logo: string, content: string, onClickDisconnect: MouseEventHandler }) => {
+const WrongStatus = ({ logo, content, onClickDisconnect }: { logo: ReactNode, content: string, onClickDisconnect: MouseEventHandler }) => {
   return <WrongStatusStyled>
-    <img className={"logo"} src={logo} />
+    <Box className="logo">{logo}</Box>
+    
+    {/* <img className={"logo"} src={logo} /> */}
     <Typography className={"content"}>
       {content}
     </Typography>
@@ -914,7 +919,7 @@ export const GuardianPage = withTranslation(["common"])(
         case AccountStatus.ACTIVATED:
           return isSmartContractWallet
             ? <WrongStatus
-              logo={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"}
+              logo={<AlertIcon/>}
               content={"The connected wallet is a Loopring Smart Wallet. Please use your Loopring Wallet mobile app to add Guardians."}
               onClickDisconnect={() => {
 
@@ -1029,7 +1034,7 @@ export const GuardianPage = withTranslation(["common"])(
       case AccountStatus.ACTIVATED:
         if ( isSmartContractWallet || true) {
           return <WrongStatus
-            logo={"https://www.baidu.com/img/flexible/logo/pc/index_gray.png"}
+            logo={<RefuseIcon htmlColor="var(--color-warning)" style={{ width: 60, height: 60 }} />}
             content={"The connected wallet is a Loopring Smart Wallet. Please use your Loopring Wallet mobile app to add Guardians."}
             onClickDisconnect={() => {
               
