@@ -8,6 +8,7 @@ import {
   copyToClipBoard,
   ExitIcon,
   HelpIcon,
+  LoadingIcon,
   LockIcon,
   LockIcon2,
   RightArrowIcon,
@@ -36,10 +37,10 @@ import { TxHebaoAction, useHebaoMain } from "./hook";
 import { ModalLock } from "./modal";
 import { WalletHistory } from "./WalletHistory";
 import { WalletValidationInfo } from "./WalletValidationInfo";
-import { WalletProtector } from "./WalletProtector";
+import { useHebaoProtector, WalletProtector } from "./WalletProtector";
 import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
-import { Guardian, HebaoOperationLog, Protector } from "@loopring-web/loopring-sdk";
+import { Guardian, HebaoOperationLog, HEBAO_LOCK_STATUS, Protector } from "@loopring-web/loopring-sdk";
 import moment from "moment";
 
 const VCODE_UNIT = 6;
@@ -112,7 +113,29 @@ const Section = ({ logo, title, description, onClick }: { logo: JSX.Element, tit
   </>
 }
 
-const WalletProtectors = ({ protectorList }: { protectorList: Protector[] }) => {
+// const handleOpenModal = ({
+//   step,
+//   options,
+// }: {
+//   step: GuardianStep;
+//   options?: any;
+// }) => {
+//   setOpenHebao((state) => {
+//     state.isShow = true;
+//     state.step = step;
+//     state.options = {
+//       ...state.options,
+//       ...options,
+//     };
+//     return { ...state };
+//   });
+// };
+const WalletProtectors = ({ protectorList, handleOpenModal, loadData, guardianConfig}: { 
+  protectorList: Protector[];
+  handleOpenModal: (info: {step: GuardianStep, options?: any}) => void;
+  loadData: () => Promise<void>;
+  guardianConfig: any;
+}) => {
   const { t } = useTranslation();
   if (protectorList.length === 0) {
     return <Box flex={1} height={"100%"} width={"100%"}>
@@ -132,17 +155,104 @@ const WalletProtectors = ({ protectorList }: { protectorList: Protector[] }) => 
       />
     </Box>
   } else {
+
+    const StatusView = ({ status, onClickLock }: {status: HEBAO_LOCK_STATUS, onClickLock: () => void}) => {
+      // lockStatus = "UNLOCK_WAITING"
+      switch ("CREATED") {
+        case "UNLOCK_FAILED":
+        case "LOCKED":
+          return (
+            <>
+              <LockIcon color={"error"} fontSize={"medium"} />
+              <Typography
+                color={"error"}
+                paddingLeft={1}
+                variant={"body1"}
+                component={"span"}
+                alignItems={"center"}
+                display={"inline-flex"}
+                lineHeight={"inherit"}
+              >
+                {"LOCKED"}
+              </Typography>
+            </>
+          );
+        case "UNLOCK_WAITING":
+          return (
+            <>
+              <LoadingIcon color={"warning"} fontSize={"medium"} />
+              <Typography
+                color={"warning"}
+                paddingLeft={1}
+                variant={"body1"}
+                component={"span"}
+                alignItems={"center"}
+                display={"inline-flex"}
+                lineHeight={"inherit"}
+              >
+                {"UNLOCKING"}
+              </Typography>
+            </>
+          );
+        case "LOCK_WAITING":
+          return (
+            <>
+              <LockIcon color={"warning"} fontSize={"medium"} />
+              <Typography
+                color={"var(--color-warning)"}
+                paddingLeft={1}
+                height={32}
+                variant={"body1"}
+                component={"span"}
+                alignItems={"center"}
+                display={"inline-flex"}
+                lineHeight={"inherit"}
+              >
+                {"LOCKING"}
+              </Typography>
+            </>
+          );
+        case "LOCK_FAILED":
+        case "CREATED":
+          return (
+            <Button
+              variant={"contained"}
+              size={"small"}
+              color={"primary"}
+              startIcon={<LockIcon htmlColor={"var(--color-text-button)"} />}
+              onClick={() => onClickLock()}
+            >
+              {t("labelLock")}
+            </Button>
+          );
+      }
+    }
+    const { onLock } = useHebaoProtector({
+      guardianConfig,
+      handleOpenModal,
+      loadData,
+    });
+    
     return <>
-      {protectorList.map(x => <>
-        <Box display={"flex"} alignItems={"center"} justifyContent={"space-between"} marginBottom={4}>
-          <Box>
-            {/* todo: Unknown translation */}
-            <Typography variant={"h6"}>{x.ens ? x.ens : 'Unknown'}</Typography>
-            <Typography color={"var(--color-text-third)"}>{x.address}</Typography>
-          </Box>
-          <Button variant={"outlined"} size={"medium"} color={"secondary"}>Lock Wallet</Button>
+      {protectorList.map(x => {
+        const {lockStatus} = x
+        
+        return <Box key={x.address} display={"flex"} alignItems={"center"} justifyContent={"space-between"} marginBottom={4}>
+        <Box>
+          {/* todo: Unknown translation */}
+          <Typography variant={"h6"}>{x.ens ? x.ens : 'Unknown'}</Typography>
+          <Typography color={"var(--color-text-third)"}>{x.address}</Typography>
         </Box>
-      </>)}
+        <StatusView status={lockStatus} onClickLock={() => {
+          onLock(x);
+          handleOpenModal({
+            step: GuardianStep.LockAccount_WaitForAuth,
+            options: { lockRetry: onLock, lockRetryParams: x },
+          });
+        }}/>
+        {/* <Button variant={"outlined"} size={"medium"} color={"secondary"}><StatusView></StatusView> Lock Wallet</Button> */}
+      </Box>
+      })}
     </>
 
   }
@@ -845,7 +955,14 @@ export const GuardianPage = withTranslation(["common"])(
             </Typography>
           </Typography>
         }
-        body={<WalletProtectors protectorList={protectList}></WalletProtectors>}
+        body={
+          <WalletProtectors
+            guardianConfig={guardianConfig}
+            loadData={loadData}
+            handleOpenModal={handleOpenModal}
+            protectorList={protectList}
+          />
+        }
       />
       <AModal
         open={showApprovalRequests}
@@ -932,6 +1049,18 @@ export const GuardianPage = withTranslation(["common"])(
         }
         body={<History operationLogList={operationLogList}/>}
       />
+      <ModalLock
+        options={openHebao.options ?? {}}
+        open={openHebao.isShow}
+        step={openHebao.step}
+        handleOpenModal={handleOpenModal}
+        onClose={() => {
+          setOpenHebao({
+            isShow: false,
+            step: GuardianStep.LockAccount_WaitForAuth,
+          });
+        }}
+      />
       <YoStyled marginTop={2}>
         <Section onClick={() => onOpenAdd(true)} title={"Set as Guardian"} logo={<RoundAddIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
         <Section description={"Who I Protect"} onClick={() => onOpenLockWallet(true)} title={"Lock/unlock Wallet"} logo={<LockIcon2 htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
@@ -974,18 +1103,7 @@ export const GuardianPage = withTranslation(["common"])(
           description={description()}
           url={`ethereum:${account?.accAddress}?type=${account?.connectName}&action=HebaoAddGuardian`}
         />
-        <ModalLock
-          options={openHebao.options ?? {}}
-          open={openHebao.isShow}
-          step={openHebao.step}
-          handleOpenModal={handleOpenModal}
-          onClose={() => {
-            setOpenHebao({
-              isShow: false,
-              step: GuardianStep.LockAccount_WaitForAuth,
-            });
-          }}
-        />
+        
         <>
 
           {

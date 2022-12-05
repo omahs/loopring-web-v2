@@ -183,7 +183,8 @@ export const HebaoProtectItem = <T extends sdk.Protector>(
   const { t } = useTranslation("common");
   const { address, ens, lockStatus, onClick } = props;
   const statusView = React.useMemo(() => {
-    switch (lockStatus) {
+    // lockStatus = "UNLOCK_WAITING"
+    switch ("CREATED") {
       case "UNLOCK_FAILED":
       case "LOCKED":
         return (
