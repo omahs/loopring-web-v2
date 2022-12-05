@@ -823,8 +823,7 @@ export const GuardianPage = withTranslation(["common"])(
         }
       />
       <AModal
-        open
-        // ={showLockWallet}
+        open={showLockWallet}
         onClose={() => onOpenLockWallet(false)}
         title={
           <Typography component={"p"} textAlign={"center"} marginBottom={1}>
@@ -977,16 +976,14 @@ export const GuardianPage = withTranslation(["common"])(
         />
         <ModalLock
           options={openHebao.options ?? {}}
-          {...{
-            open: openHebao.isShow,
-            step: openHebao.step,
-            handleOpenModal,
-            onClose: () => {
-              setOpenHebao({
-                isShow: false,
-                step: GuardianStep.LockAccount_WaitForAuth,
-              });
-            },
+          open={openHebao.isShow}
+          step={openHebao.step}
+          handleOpenModal={handleOpenModal}
+          onClose={() => {
+            setOpenHebao({
+              isShow: false,
+              step: GuardianStep.LockAccount_WaitForAuth,
+            });
           }}
         />
         <>
