@@ -38,10 +38,10 @@ const AModalContentStyled = styled(Box)`
 
 export const QRCodePanel = ({
   size = 160,
-  title,
+  // title,
   description,
-  fgColor = "#4169FF",
-  bgColor = "#fff",
+  // fgColor = "#4169FF",
+  // bgColor = "#fff",
   url = "https://exchange.loopring.io/",
 }: // handleClick
 QRCodeProps & Partial<BaseQRCodeProps>) => {
@@ -55,7 +55,7 @@ QRCodeProps & Partial<BaseQRCodeProps>) => {
       alignItems={"center"}
       flexDirection={"column"}
     >
-      {title && (
+      {/* {title && (
         <Typography
           variant={"h4"}
           component="h3"
@@ -64,18 +64,25 @@ QRCodeProps & Partial<BaseQRCodeProps>) => {
         >
           {title}
         </Typography>
-      )}
+      )} */}
       <QRCode
         value={url}
         size={size}
-        fgColor={fgColor}
-        bgColor={bgColor}
-        style={{ padding: 8, background: bgColor }}
+        // fgColor={fgColor}
+        // bgColor={bgColor}
+        style={{ 
+          padding: 8, 
+          // background: bgColor 
+        }}
         aria-label={`link:${url}`}
       />
       {description && (
         <Typography variant={"body1"} marginBottom={3} marginTop={1}>
-          {description}
+          {typeof description === 'string' 
+            ? `${description.slice(0,6)}...${description.slice(description.length - 4)}`
+            : description
+          }
+          {/* {description.slice(0,6)}...{} */}
         </Typography>
       )}
     </Box>
@@ -84,7 +91,7 @@ QRCodeProps & Partial<BaseQRCodeProps>) => {
 
 export const Body = ({
   // size = 160,
-  // title,
+  title,
   // description,
   // fgColor = "#4169FF",
   // bgColor = "#fff",

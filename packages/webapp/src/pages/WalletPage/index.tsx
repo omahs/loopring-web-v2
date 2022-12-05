@@ -1,10 +1,13 @@
-import { WithTranslation, withTranslation } from "react-i18next";
-import React, { MouseEventHandler } from "react";
+import { useTranslation, WithTranslation, withTranslation } from "react-i18next";
+import React, { MouseEventHandler, useCallback } from "react";
 import {
   AccountStatus,
   AddIcon,
   ApprovalIcon,
+  CopyIcon,
+  copyToClipBoard,
   ExitIcon,
+  HelpIcon,
   LockIcon,
   LockIcon2,
   RightArrowIcon,
@@ -14,13 +17,14 @@ import {
   subMenuGuardian,
   ViewHistoryIcon,
 } from "@loopring-web/common-resources";
-import { Box, Button, Grid, Link, Typography } from "@mui/material";
+import { Box, Button, Grid, IconButton, Link, Tooltip, Typography } from "@mui/material";
 import {
   AModal,
   EmptyDefault,
   GuardianStep,
   ModalCloseButton,
   ModalQRCode,
+  QRCodePanel,
   SubMenu,
   SubMenuList,
   SwitchPanelStyled,
@@ -28,7 +32,7 @@ import {
 } from "@loopring-web/component-lib";
 import { useAccount, BtnConnectL1, StylePaper, LoopringAPI } from "@loopring-web/core";
 import { useRouteMatch } from "react-router-dom";
-import { useHebaoMain } from "./hook";
+import { TxHebaoAction, useHebaoMain } from "./hook";
 import { ModalLock } from "./modal";
 import { WalletHistory } from "./WalletHistory";
 import { WalletValidationInfo } from "./WalletValidationInfo";
@@ -36,6 +40,7 @@ import { WalletProtector } from "./WalletProtector";
 import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
 import { Guardian, HebaoOperationLog, Protector } from "@loopring-web/loopring-sdk";
+import moment from "moment";
 
 const VCODE_UNIT = 6;
 
@@ -108,21 +113,44 @@ const Section = ({ logo, title, description, onClick }: { logo: JSX.Element, tit
 }
 
 const WalletProtectors = ({ protectorList }: { protectorList: Protector[] }) => {
-  return <>
-    {protectorList.map(x => <>
-      <Box display={"flex"} alignItems={"center"} justifyContent={"space-between"} marginBottom={4}>
-        <Box>
-          {/* todo: Unknown translation */}
-          <Typography variant={"h6"}>{x.ens ? x.ens : 'Unknown'}</Typography>
-          <Typography color={"var(--color-text-third)"}>{x.address}</Typography>
+  const { t } = useTranslation();
+  if (protectorList.length === 0) {
+    return <Box flex={1} height={"100%"} width={"100%"}>
+      <EmptyDefault
+        style={{ alignSelf: "center" }}
+        height={"100%"}
+        message={() => (
+          <Box
+            flex={1}
+            display={"flex"}
+            alignItems={"center"}
+            justifyContent={"center"}
+          >
+            {t("labelNoContent")}
+          </Box>
+        )}
+      />
+    </Box>
+  } else {
+    return <>
+      {protectorList.map(x => <>
+        <Box display={"flex"} alignItems={"center"} justifyContent={"space-between"} marginBottom={4}>
+          <Box>
+            {/* todo: Unknown translation */}
+            <Typography variant={"h6"}>{x.ens ? x.ens : 'Unknown'}</Typography>
+            <Typography color={"var(--color-text-third)"}>{x.address}</Typography>
+          </Box>
+          <Button variant={"outlined"} size={"medium"} color={"secondary"}>Lock Wallet</Button>
         </Box>
-        <Button variant={"outlined"} size={"medium"} color={"secondary"}>Lock Wallet</Button>
-      </Box>
-    </>)}
-  </>
+      </>)}
+    </>
+
+  }
+  
 }
 
-const RqeusetApprovals = ({ guardiansList, t }: { guardiansList: Guardian[] } & WithTranslation) => {
+const RqeusetApprovals = ({ guardiansList }: { guardiansList: Guardian[] }) => {
+  const {t} = useTranslation();
   return guardiansList.length !== 0 ? <>
     {guardiansList.map((guardian, index) => {
       return (
@@ -161,14 +189,19 @@ const RqeusetApprovals = ({ guardiansList, t }: { guardiansList: Guardian[] } & 
             alignItems={"center"}
             justifyContent={"center"}
           >
-            {/* {t("labelNoContent")} */}
+            {t("labelNoContent")}
           </Box>
         )}
       />
     </Box>
   )
 }
-const History = ({ operationLogList, t }: { operationLogList: HebaoOperationLog[] } & WithTranslation) => {
+const History = ({ operationLogList}: { operationLogList: HebaoOperationLog[] }) => {
+  operationLogList = [
+    {status: 1, createdAt: 0, ens: 'ens', from: '111',hebaoTxType: 1, to: '111', id: 1},
+    {status: 1, createdAt: 0, ens: 'ens', from: '111',hebaoTxType: 1, to: '111', id: 1},
+  ]
+  const {t} = useTranslation();
   return operationLogList.length !== 0 ? <>
     {operationLogList.map((log, index) => {
       return (
@@ -180,17 +213,13 @@ const History = ({ operationLogList, t }: { operationLogList: HebaoOperationLog[
           marginBottom={4}
         >
           <Box>
-            <Typography variant={"h6"}>{log.hebaoTxType}</Typography>
+            <Typography variant={"h6"}>{log.status === TxHebaoAction.Approve ? '授权' : '拒绝'}{log.ens ? log.ens : 'Unknow'}为守护人</Typography>
             <Typography variant={"h6"}>
-              {/* todo: Unknown translation */}
-              {log.ens ? log.ens : 'Unknown'} /
-              <Typography component={"span"} color={"var(--color-text-third)"}>{log.address && `${log.address.slice(0, 6)}...${log.address.slice(log.address.length - 4,)}`}</Typography>
+              {moment(
+                new Date(log.createdAt),
+                "YYYYMMDDHHMM"
+              ).fromNow()}
             </Typography>
-          </Box>
-          <Box>
-            <Box display={"inline-block"} marginRight={2}><Button variant={"outlined"} size={"medium"}>Approve</Button></Box>
-
-            <Button variant={"outlined"} size={"medium"}>Reject</Button>
           </Box>
         </Box>
       );
@@ -399,22 +428,28 @@ export const GuardianPage = withTranslation(["common"])(
     // if (match?.params?['item'] === 'add-guardian') {
     //   openQRCode
     // }
-    const description = () => (
-      <Typography
-        marginTop={2}
-        component={"div"}
-        textAlign={"center"}
-        variant={"body2"}
-      >
-        <Typography
-          color={"var(--color-text-secondary)"}
-          component={"p"}
-          variant={"inherit"}
-        >
-          {account?.accAddress}
-        </Typography>
-      </Typography>
-    );
+    // const description = () => (
+      
+    //   // <Typography
+    //   //   marginTop={2}
+    //   //   component={"div"}
+    //   //   textAlign={"center"}
+    //   //   variant={"body2"}
+    //   // >
+    //   //   <Typography
+    //   //     color={"var(--color-text-secondary)"}
+    //   //     component={"p"}
+    //   //     variant={"inherit"}
+    //   //   >
+          
+    //   //     {account?.accAddress}
+    //   //     <IconButton>
+    //   //       <CopyIcon />
+    //   //     </IconButton>
+    //   //     {/* {account?.accAddress && `${account?.accAddress.slice(0,6)}...${account?.accAddress.slice(account?.accAddress.length - 4)}`} */}
+    //   //   </Typography>
+    //   // </Typography>
+    // );
     // @ts-ignore
     const selected = match?.params?.item ?? "myProtected";
     const {
@@ -475,14 +510,15 @@ export const GuardianPage = withTranslation(["common"])(
               />
             </Box>
           ) : !isContractAddress ? (
-            <WalletValidationInfo
-              onOpenAdd={onOpenAdd}
-              isContractAddress={isContractAddress}
-              // isLoading={isLoading}
-              {...{ guardiansList, guardianConfig, setOpenHebao }}
-              handleOpenModal={handleOpenModal}
-              loadData={loadData}
-            />
+            '1'
+            // <WalletValidationInfo
+            //   onOpenAdd={onOpenAdd}
+            //   isContractAddress={isContractAddress}
+            //   // isLoading={isLoading}
+            //   {...{ guardiansList, guardianConfig, setOpenHebao }}
+            //   handleOpenModal={handleOpenModal}
+            //   loadData={loadData}
+            // />
           ) : (
             <Box
               flex={1}
@@ -524,15 +560,16 @@ export const GuardianPage = withTranslation(["common"])(
               />
             </Box>
           ) : !isContractAddress ? (
-            <WalletProtector
-              onOpenAdd={onOpenAdd}
-              protectList={protectList}
-              guardianConfig={guardianConfig}
-              loadData={loadData}
-              isContractAddress={isContractAddress}
-              // isContractAddress={isContractAddress}
-              handleOpenModal={handleOpenModal}
-            />
+            '1'
+            // <WalletProtector
+            //   onOpenAdd={onOpenAdd}
+            //   protectList={protectList}
+            //   guardianConfig={guardianConfig}
+            //   loadData={loadData}
+            //   isContractAddress={isContractAddress}
+            //   // isContractAddress={isContractAddress}
+            //   handleOpenModal={handleOpenModal}
+            // />
           ) : (
             <Box
               flex={1}
@@ -666,9 +703,11 @@ export const GuardianPage = withTranslation(["common"])(
       guardianRouter,
     ]);
     const theme = useTheme()
-
+    const onClickCopy = useCallback((str: string) => {
+      copyToClipBoard(str)
+    }, [])
     return <>
-      <ModalQRCode
+      {/* <ModalQRCode
         open={openQRCode}
         fgColor={"#000"}
         bgColor={"#fff"}
@@ -695,11 +734,97 @@ export const GuardianPage = withTranslation(["common"])(
           </Typography>
         }
         size={260}
-        description={description()}
+        description={
+          <Button>
+            <Typography
+              marginTop={2}
+              component={"div"}
+              variant={"body2"}
+              display={"flex"}
+              justifyContent={"center"}
+              alignItems={"center"}
+            >
+              <Typography
+                color={"var(--color-text-secondary)"}
+                component={"p"}
+                variant={"inherit"}
+                display={"flex"}
+                alignItems={"center"}
+              >
+                <Typography marginRight={0.5}>{account?.accAddress}</Typography>
+
+                <CopyIcon />
+              </Typography>
+            </Typography>
+          </Button>
+        }
         url={`ethereum:${account?.accAddress}?type=${account?.connectName}&action=HebaoAddGuardian`}
+      /> */}
+      <AModal
+        open={openQRCode}
+        onClose={() => onOpenAdd(false)}
+        title={
+          <Typography component={"p"} textAlign={"center"} marginBottom={1}>
+            
+            <Typography
+              color={"var(--color-text-primary)"}
+              component={"p"}
+              variant={"h4"}
+              marginBottom={2}
+              display={"flex"}
+              alignItems={"center"}
+              justifyContent={"center"}
+            >
+              {t("labelWalletAddAsGuardian")}
+              <Tooltip title={'Easily add other Loopring Wallets as Guardians to secure your identity and crypto assets. After entering the wallet address, the user will receive a notification of the request directly in their Loopring Wallet app. Invite your friends and family to use the Loopring Wallet.'}>
+                <Box marginLeft={1} display={"flex"} alignItems={"center"}>
+                  <HelpIcon fontSize="large" />
+                </Box>
+              </Tooltip>
+            </Typography>
+            <Typography
+              color={"var(--color-text-secondary)"}
+              component={"p"}
+              variant={"body1"}
+              marginBottom={2}
+            >
+              {t("labelWalletScanQRCode")}
+            </Typography>
+          </Typography>
+        }
+        body={
+          <QRCodePanel
+            description={
+              <Button onClick={() => account?.accAddress && onClickCopy(account?.accAddress)}>
+                <Typography
+                  marginTop={2}
+                  component={"div"}
+                  variant={"body2"}
+                  display={"flex"}
+                  justifyContent={"center"}
+                  alignItems={"center"}
+                >
+                  <Typography
+                    color={"var(--color-text-secondary)"}
+                    component={"p"}
+                    variant={"inherit"}
+                    display={"flex"}
+                    alignItems={"center"}
+                  >
+                    <Typography marginRight={0.5}>{account?.accAddress}</Typography>
+
+                    <CopyIcon />
+                  </Typography>
+                </Typography>
+              </Button>}
+            size={260}
+            url={`ethereum:${account?.accAddress}?type=${account?.connectName}&action=HebaoAddGuardian`}
+          />
+        }
       />
       <AModal
-        open={showLockWallet}
+        open
+        // ={showLockWallet}
         onClose={() => onOpenLockWallet(false)}
         title={
           <Typography component={"p"} textAlign={"center"} marginBottom={1}>
@@ -724,8 +849,7 @@ export const GuardianPage = withTranslation(["common"])(
         body={<WalletProtectors protectorList={protectList}></WalletProtectors>}
       />
       <AModal
-        open={false}
-        // ={showApprovalRequests}
+        open={showApprovalRequests}
         onClose={() => onOpenApprovalRequests(false)}
         title={
           <Typography component={"p"} textAlign={"center"} marginBottom={1}>
@@ -793,8 +917,7 @@ export const GuardianPage = withTranslation(["common"])(
         }
       />
       <AModal
-        open
-        // ={showHistory}
+        open={showHistory}
         onClose={() => onOpenHistory(false)}
         title={
           <Typography component={"p"} textAlign={"center"} marginBottom={1}>
@@ -808,7 +931,7 @@ export const GuardianPage = withTranslation(["common"])(
             </Typography>
           </Typography>
         }
-        body={<History guardiansList={guardiansList}/>}
+        body={<History operationLogList={operationLogList}/>}
       />
       <YoStyled marginTop={2}>
         <Section onClick={() => onOpenAdd(true)} title={"Set as Guardian"} logo={<RoundAddIcon htmlColor="var(--color-text-primary)" style={{ width: "var(--svg-size-cover)", height: "var(--svg-size-cover)" }} />} />
