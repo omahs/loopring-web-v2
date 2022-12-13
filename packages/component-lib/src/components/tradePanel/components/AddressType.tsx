@@ -93,10 +93,12 @@ export const TransferAddressType = <T extends WALLET_TYPE>({
   selectedValue,
   handleSelected,
   disabled,
+  detectedWalletType
 }: {
-  selectedValue: T | undefined;
-  handleSelected: (value: T) => void;
+  selectedValue: WALLET_TYPE | EXCHANGE_TYPE | undefined;
+  handleSelected: (value: WALLET_TYPE | EXCHANGE_TYPE) => void;
   disabled: boolean;
+  detectedWalletType: WALLET_TYPE;
 }) => {
   const { t } = useTranslation("common");
   const { walletList, walletListFn } = useAddressTypeLists<T>();
@@ -116,6 +118,7 @@ export const TransferAddressType = <T extends WALLET_TYPE>({
   const onOpen = () => {
     setOpen(true);
   };
+  // const walletType = WALLET_TYPE.EOA
   return (
     <TextField
       select
@@ -129,20 +132,20 @@ export const TransferAddressType = <T extends WALLET_TYPE>({
         onOpen,
         autoWidth: false,
         renderValue: (selectedValue) =>
-        walletListFn(WALLET_TYPE.EOA).find((item) => item.value === selectedValue)?.label ?? "",
+          walletListFn(detectedWalletType).find((item) => item.value === selectedValue)?.label ?? "",
       }}
       label={t("labelL2toL2AddressType")}
       // inputProps={{}}
     >
       <Box maxWidth={"470px"}>
         {desMenuItem}
-        {walletListFn(WALLET_TYPE.EOA).map(({ value, label, description, disabled, maxWidth }) => (
+        {walletListFn(detectedWalletType).map(({ value, label, description, disabled, maxWidth }) => (
           <WalletItemOptions
             key={value}
             value={value}
             myValue={value}
             handleSelected={(value) => {
-              handleSelected(value as T);
+              handleSelected(value);
               onClose();
             }}
             maxWidth={maxWidth}

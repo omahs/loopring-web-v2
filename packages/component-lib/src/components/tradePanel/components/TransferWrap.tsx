@@ -16,6 +16,8 @@ import {
   EmptyValueTag,
   FeeInfo,
   AddressError,
+  WALLET_TYPE,
+  EXCHANGE_TYPE,
 } from "@loopring-web/common-resources";
 import {
   Button,
@@ -115,7 +117,78 @@ export const TransferWrap = <
     [AddressError.InvalidAddr, AddressError.IsNotLoopringContract].includes(
       addrStatus
     );
+  const detectedWalletType = WALLET_TYPE.EOA
+  let isExchange
+  if (sureItsLayer2 && sureItsLayer2 in EXCHANGE_TYPE) {
+    isExchange = true
+  } else {
+    isExchange = false
+  }
+  const isExchangeEOA = 
+    detectedWalletType === WALLET_TYPE.EOA && isExchange
 
+  // console.log('sureItsLayer2', sureItsLayer2)
+  let aaaaaaa
+  if (isInvalidAddressOrENS) {
+    aaaaaaa = <Typography
+      color={"var(--color-error)"}
+      variant={"body2"}
+      marginTop={1 / 4}
+      alignSelf={"stretch"}
+      position={"relative"}
+    >
+      {t(`labelL2toL2${addrStatus}`)}
+    </Typography>
+  } else if (isExchangeEOA) {
+    aaaaaaa = <Typography
+      color={"var(--color-error)"}
+      variant={"body2"}
+      marginTop={1 / 4}
+      alignSelf={"stretch"}
+      position={"relative"}
+    >
+      Sending to an Exchange Address L2 account is not supported. Loopring L2 accounts cannot be activated on Exchange wallet addresses. Instead, please send to the L1 account associated with this address.
+    </Typography>
+  } else if (isSameAddress) {
+    aaaaaaa = <Typography
+      color={"var(--color-error)"}
+      variant={"body2"}
+      marginTop={1 / 4}
+      alignSelf={"stretch"}
+      position={"relative"}
+    >
+      {t("labelInvalidisSameAddress", {
+        way: t("labelL2toL2"),
+      })}
+    </Typography>
+  } else {
+    aaaaaaa = <>
+      {addressDefault && realAddr && !isAddressCheckLoading && (
+        <Typography
+          color={"var(--color-text-primary)"}
+          variant={"body2"}
+          marginTop={1 / 4}
+          whiteSpace={"pre-line"}
+          style={{ wordBreak: "break-all" }}
+        >
+          {realAddr}
+        </Typography>
+      )}
+      {!isAddressCheckLoading &&
+        addressDefault &&
+        addrStatus === AddressError.NoError &&
+        !isLoopringAddress && (
+          <Typography
+            color={"var(--color-error)"}
+            lineHeight={1}
+            variant={"body2"}
+            marginTop={1 / 4}
+          >
+            {t("labelL2toL2AddressNotLoopring")}
+          </Typography>
+        )}
+    </>
+  }
   return (
     <Grid
       className={walletMap ? "transfer-wrap" : "loading"}
@@ -249,61 +322,13 @@ export const TransferWrap = <
           ""
         )}
         <Box marginLeft={1 / 2}>
-          {isInvalidAddressOrENS ? (
-            <Typography
-              color={"var(--color-error)"}
-              variant={"body2"}
-              marginTop={1 / 4}
-              alignSelf={"stretch"}
-              position={"relative"}
-            >
-              {t(`labelL2toL2${addrStatus}`)}
-            </Typography>
-          ) : isSameAddress ? (
-            <Typography
-              color={"var(--color-error)"}
-              variant={"body2"}
-              marginTop={1 / 4}
-              alignSelf={"stretch"}
-              position={"relative"}
-            >
-              {t("labelInvalidisSameAddress", {
-                way: t("labelL2toL2"),
-              })}
-            </Typography>
-          ) : (
-            <>
-              {addressDefault && realAddr && !isAddressCheckLoading && (
-                <Typography
-                  color={"var(--color-text-primary)"}
-                  variant={"body2"}
-                  marginTop={1 / 4}
-                  whiteSpace={"pre-line"}
-                  style={{ wordBreak: "break-all" }}
-                >
-                  {realAddr}
-                </Typography>
-              )}
-              {!isAddressCheckLoading &&
-                addressDefault &&
-                addrStatus === AddressError.NoError &&
-                !isLoopringAddress && (
-                  <Typography
-                    color={"var(--color-error)"}
-                    lineHeight={1}
-                    variant={"body2"}
-                    marginTop={1 / 4}
-                  >
-                    {t("labelL2toL2AddressNotLoopring")}
-                  </Typography>
-                )}
-            </>
-          )}
+          {aaaaaaa}
         </Box>
       </Grid>
 
       <Grid item alignSelf={"stretch"} position={"relative"}>
         <TransferAddressType
+          detectedWalletType={detectedWalletType}
           selectedValue={sureItsLayer2}
           handleSelected={handleSureItsLayer2}
           disabled={

@@ -26,6 +26,7 @@ import {
   WALLET_TYPE,
   LIVE_FEE_TIMES,
   SUBMIT_PANEL_AUTO_CLOSE,
+  EXCHANGE_TYPE,
 } from "@loopring-web/common-resources";
 
 import {
@@ -70,7 +71,7 @@ export const useTransfer = <R extends IBData<T>, T>() => {
     makeWalletLayer2(true).walletMap ?? ({} as WalletMap<R>)
   );
   const [sureItsLayer2, setSureItsLayer2] =
-    React.useState<WALLET_TYPE | undefined>(undefined);
+    React.useState<WALLET_TYPE | EXCHANGE_TYPE | undefined>(undefined);
   const { btnStatus, enableBtn, disableBtn } = useBtnStatus();
 
   const {

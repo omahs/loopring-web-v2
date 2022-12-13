@@ -64,8 +64,8 @@ export type TransferInfoProps<C> = {
 export type TransferExtendProps<T, I, C> = {
   isThumb?: boolean;
   addressDefault?: string;
-  sureItsLayer2: WALLET_TYPE | undefined;
-  handleSureItsLayer2: (sure: WALLET_TYPE) => void;
+  sureItsLayer2: WALLET_TYPE | EXCHANGE_TYPE | undefined;
+  handleSureItsLayer2: (sure: WALLET_TYPE | EXCHANGE_TYPE) => void;
   realAddr?: string;
   isLoopringAddress?: boolean;
   isAddressCheckLoading?: boolean;
