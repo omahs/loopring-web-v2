@@ -103,6 +103,7 @@ export const useTransfer = <R extends IBData<T>, T>() => {
     isLoopringAddress,
     isAddressCheckLoading,
     isSameAddress,
+    isContractAddress
   } = useAddressCheck();
   React.useEffect(() => {
     setSureItsLayer2(undefined);
@@ -546,6 +547,7 @@ export const useTransfer = <R extends IBData<T>, T>() => {
     handleOnAddressChange: (value: any) => {
       setAddress(value || "");
     },
+    isSmartContractAddress: isContractAddress
   };
 
   return {

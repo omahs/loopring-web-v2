@@ -68,6 +68,7 @@ export type TransferExtendProps<T, I, C> = {
   handleSureItsLayer2: (sure: WALLET_TYPE | EXCHANGE_TYPE) => void;
   realAddr?: string;
   isLoopringAddress?: boolean;
+  isSmartContractAddress?: boolean;
   isAddressCheckLoading?: boolean;
   isSameAddress?: boolean;
   addrStatus: AddressError;
@@ -193,6 +194,7 @@ export type WithdrawExtendProps<T, I, C> = {
   realAddr?: string;
   isAddressCheckLoading: boolean;
   isCFAddress: boolean;
+  isLoopringAddress: boolean;
   isContractAddress: boolean;
   isFastWithdrawAmountLimit?: boolean;
   addrStatus: AddressError;
@@ -204,8 +206,8 @@ export type WithdrawExtendProps<T, I, C> = {
   wait?: number;
   onBack?: () => void;
   isToMyself?: boolean;
-  sureIsAllowAddress: EXCHANGE_TYPE | undefined;
-  handleSureIsAllowAddress: (value: EXCHANGE_TYPE) => void;
+  sureIsAllowAddress: WALLET_TYPE | EXCHANGE_TYPE | undefined;
+  handleSureIsAllowAddress: (value: WALLET_TYPE | EXCHANGE_TYPE) => void;
 } & WithdrawInfoProps<C>;
 
 export type WithdrawViewProps<T, I, C = CoinKey<I> | string> =

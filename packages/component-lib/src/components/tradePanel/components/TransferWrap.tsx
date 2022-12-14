@@ -72,6 +72,7 @@ export const TransferWrap = <
   handleOnMemoChange,
   isAddressCheckLoading,
   isSameAddress,
+  isSmartContractAddress,
   baseURL,
   ...rest
 }: TransferViewProps<T, I, C> &
@@ -117,7 +118,11 @@ export const TransferWrap = <
     [AddressError.InvalidAddr, AddressError.IsNotLoopringContract].includes(
       addrStatus
     );
-  const detectedWalletType = WALLET_TYPE.EOA
+  const detectedWalletType = isLoopringAddress 
+    ? WALLET_TYPE.Loopring
+    : isSmartContractAddress 
+      ? WALLET_TYPE.OtherSmart 
+      : WALLET_TYPE.EOA 
   let isExchange
   if (sureItsLayer2 && sureItsLayer2 in EXCHANGE_TYPE) {
     isExchange = true
@@ -126,6 +131,8 @@ export const TransferWrap = <
   }
   const isExchangeEOA = 
     detectedWalletType === WALLET_TYPE.EOA && isExchange
+  const isOtherSmartWallet = 
+    detectedWalletType === WALLET_TYPE.OtherSmart
 
   // console.log('sureItsLayer2', sureItsLayer2)
   let aaaaaaa
@@ -148,6 +155,16 @@ export const TransferWrap = <
       position={"relative"}
     >
       Sending to an Exchange Address L2 account is not supported. Loopring L2 accounts cannot be activated on Exchange wallet addresses. Instead, please send to the L1 account associated with this address.
+    </Typography>
+  } else if (isOtherSmartWallet) {
+    aaaaaaa = <Typography
+      color={"var(--color-error)"}
+      variant={"body2"}
+      marginTop={1 / 4}
+      alignSelf={"stretch"}
+      position={"relative"}
+    >
+      This wallet binds with smart contract that does not support Loopring Layer 2. You will need to send funds to the L1 account. 
     </Typography>
   } else if (isSameAddress) {
     aaaaaaa = <Typography
@@ -450,7 +467,12 @@ export const TransferWrap = <
               ? "true"
               : "false"
           }
-          disabled={getDisabled || transferBtnStatus === TradeBtnStatus.LOADING}
+          disabled={
+            getDisabled 
+              || transferBtnStatus === TradeBtnStatus.LOADING
+              || isExchangeEOA
+              || isOtherSmartWallet
+          }
         >
           {t(transferI18nKey ?? `labelL2toL2Btn`)}
         </Button>

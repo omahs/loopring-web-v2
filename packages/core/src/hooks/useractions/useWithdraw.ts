@@ -26,6 +26,7 @@ import {
   getValuePrecisionThousand,
   globalSetup,
   SUBMIT_PANEL_AUTO_CLOSE,
+  WALLET_TYPE,
 } from "@loopring-web/common-resources";
 import Web3 from "web3";
 
@@ -72,7 +73,7 @@ export const useWithdraw = <R extends IBData<T>, T>() => {
     makeWalletLayer2(true, true).walletMap ?? ({} as WalletMap<R>)
   );
   const [sureIsAllowAddress, setSureIsAllowAddress] =
-    React.useState<EXCHANGE_TYPE | undefined>(undefined);
+    React.useState<WALLET_TYPE | EXCHANGE_TYPE | undefined>(undefined);
 
   const [isFastWithdrawAmountLimit, setIsFastWithdrawAmountLimit] =
     React.useState<boolean>(false);
@@ -669,7 +670,7 @@ export const useWithdraw = <R extends IBData<T>, T>() => {
     lastFailed:
       store.getState().modals.isShowAccount.info?.lastFailed ===
       LAST_STEP.withdraw,
-    handleSureIsAllowAddress: (value: EXCHANGE_TYPE) => {
+    handleSureIsAllowAddress: (value: WALLET_TYPE | EXCHANGE_TYPE) => {
       setSureIsAllowAddress(value);
     },
     onWithdrawClick: () => {
