@@ -24,6 +24,8 @@ import {
   TOAST_TIME,
   AddressError,
   AssetsRawDataItem,
+  WALLET_TYPE,
+  EXCHANGE_TYPE,
 } from "@loopring-web/common-resources";
 import {
   DropdownIconStyled,
@@ -83,6 +85,7 @@ export const WithdrawWrap = <
   handleOnAddressChange,
   isAddressCheckLoading,
   isCFAddress,
+  isLoopringAddress,
   isContractAddress,
   isFastWithdrawAmountLimit,
   addrStatus,
@@ -167,6 +170,22 @@ export const WithdrawWrap = <
       );
     }
   }, [t, tradeData, withdrawI18nKey]);
+
+  const detectedWalletType = isLoopringAddress 
+    ? WALLET_TYPE.Loopring
+    : isContractAddress 
+      ? WALLET_TYPE.OtherSmart 
+      : WALLET_TYPE.EOA 
+  let isExchange
+  if (sureIsAllowAddress && sureIsAllowAddress in EXCHANGE_TYPE) {
+    isExchange = true
+  } else {
+    isExchange = false
+  }
+  // const isExchangeEOA = 
+  //   detectedWalletType === WALLET_TYPE.EOA && isExchange
+  // const isOtherSmartWallet = 
+  //   detectedWalletType === WALLET_TYPE.OtherSmart
 
   return (
     <Grid
@@ -367,6 +386,7 @@ export const WithdrawWrap = <
       {!isToMyself && (
         <Grid item alignSelf={"stretch"} position={"relative"}>
           <WithdrawAddressType
+            detectedWalletType={detectedWalletType}
             selectedValue={sureIsAllowAddress}
             handleSelected={handleSureIsAllowAddress}
             disabled={allowToClickIsSure}
