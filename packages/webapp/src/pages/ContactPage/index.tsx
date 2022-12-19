@@ -1,7 +1,9 @@
-import { Box, Button, Typography } from "@mui/material";
+import { Avatar, Box, Button, OutlinedInput, Typography } from "@mui/material";
 import styled from "@emotion/styled";
 import { DataGridStyled, InputSearch, Table } from "@loopring-web/component-lib";
 import DataGrid, { SortColumn } from "react-data-grid";
+import { useTranslation } from "react-i18next";
+import { ActiveIcon } from "@loopring-web/common-resources";
 
 const ContactPageStyle = styled(Box)`
   background: var(--color-box);
@@ -13,7 +15,30 @@ const ContactPageStyle = styled(Box)`
   border-radius: ${({ theme }) => theme.unit}px;
 `
 
+const Line = styled('div')`
+  border-radius: ${({theme}) => theme.unit / 2}px;
+  height: 1px;
+  margin-top: ${({theme}) => theme.unit * 2}px;;
+  background: var(--color-divide);
+`;
+
 export const ContactPage = () => {
+  // const { t, i18n, ready } = useTranslation()
+  const datas = [
+    {
+      name: 'Musk',
+      address: '0xaaa',
+      avatarURL: 'https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png',
+      editing: true
+    },
+    {
+      name: 'Musk',
+      address: '0xaaa',
+      avatarURL: 'https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png',
+      editing: true
+    }
+  ]
+
   return <ContactPageStyle
     className={"MuiPaper-elevation2"}
     paddingX={4}
@@ -24,44 +49,56 @@ export const ContactPage = () => {
       <Box display={"flex"}>
         <InputSearch
           value={"searchValue"}
-          onChange={() => {}}
+          onChange={() => { }}
         />
         <Box marginLeft={2}>
-        <Button 
-          variant={"contained"}
-          size={"small"}>
+          <Button
+            variant={"contained"}
+            size={"small"}>
             Add
-        </Button>
-
+          </Button>
         </Box>
-        
-
       </Box>
-      
     </Box>
-    <Table
-      generateRows={() => ['']}
-      generateColumns={() => [['']]}
-          // {...{
-          //   ...defaultArgs,
-          //   ...rest,
-          // }}
-          // {...defaultArgs}
-          // {...rest}
-      // t={t}
-      // i18n={i18n}
-      // tReady={tReady}
-      // rowHeight={rowHeight}
-      // headerRowHeight={headerRowHeight}
-      // scroll={scroll}
-      // rawData={rawData}
-    />
-    <DataGridStyled columns={[
-      { key: 'id', name: 'ID' },
-      { key: 'title', name: 'Title' }
-    ]} rows={[{ id: 0, title: 'Example' },
-    { id: 1, title: 'Demo' }]} />
-    
-
+    <Box className="table-divide">
+      <Line />
+      {datas.map(data => {
+        const { editing, name, address, avatarURL } = data;
+        return <Box paddingY={2} display={"flex"} justifyContent={"space-between"}>
+          <Box display={"flex"}>
+            <Avatar sizes={"32px"} src={avatarURL}></Avatar>
+            <Box marginLeft={1}>
+              {
+                editing
+                  ? <OutlinedInput size={"small"} value={name} />
+                  : <Typography>{name}</Typography>
+              }
+              <Typography>{address}</Typography>
+            </Box>
+          </Box>
+          <Box display={"flex"}>
+            <Box marginRight={2}>
+              <Button
+                variant={"contained"}
+                size={"small"}>
+                Send
+              </Button>
+            </Box>
+            <Box marginRight={2}>
+              <Button
+                variant={"outlined"}
+                size={"medium"}>
+                Transactions
+              </Button>
+            </Box>
+            <Button
+              variant={"outlined"}
+              size={"medium"}>
+              Delete
+            </Button>
+          </Box>
+        </Box>
+      })}
+    </Box>
   </ContactPageStyle>
 };
