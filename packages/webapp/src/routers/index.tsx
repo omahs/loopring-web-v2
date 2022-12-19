@@ -37,6 +37,7 @@ import { InvestPage } from "../pages/InvestPage";
 import { getAnalytics, logEvent } from "firebase/analytics";
 import { AssetPage } from "../pages/AssetPage";
 import { FiatPage } from "../pages/FiatPage";
+import { ContactPage } from "pages/ContactPage";
 
 const ContentWrap = ({
   children,
@@ -299,6 +300,11 @@ const RouterView = ({ state }: { state: keyof typeof SagaStatus }) => {
         <Route exact path={["/invest", "/invest/*"]}>
           <ContentWrap state={state}>
             <InvestPage />
+          </ContentWrap>
+        </Route>
+        <Route exact path={["/contact"]}>
+          <ContentWrap state={state}>
+            <ContactPage />
           </ContentWrap>
         </Route>
         <Route
