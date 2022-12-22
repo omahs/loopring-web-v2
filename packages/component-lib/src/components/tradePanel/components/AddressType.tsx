@@ -99,7 +99,7 @@ export const TransferAddressType = <T extends WALLET_TYPE>({
   disabled: boolean;
 }) => {
   const { t } = useTranslation("common");
-  const { walletList } = useAddressTypeLists<T>();
+  const { walletList, walletListFn } = useAddressTypeLists<T>();
   const desMenuItem = React.useMemo(() => {
     return (
       <MenuItemStyle disabled={true} value={-1}>
@@ -129,14 +129,14 @@ export const TransferAddressType = <T extends WALLET_TYPE>({
         onOpen,
         autoWidth: false,
         renderValue: (selectedValue) =>
-          walletList.find((item) => item.value === selectedValue)?.label ?? "",
+        walletListFn(WALLET_TYPE.EOA).find((item) => item.value === selectedValue)?.label ?? "",
       }}
       label={t("labelL2toL2AddressType")}
       // inputProps={{}}
     >
       <Box maxWidth={"470px"}>
         {desMenuItem}
-        {walletList.map(({ value, label, description, disabled, maxWidth }) => (
+        {walletListFn(WALLET_TYPE.EOA).map(({ value, label, description, disabled, maxWidth }) => (
           <WalletItemOptions
             key={value}
             value={value}
