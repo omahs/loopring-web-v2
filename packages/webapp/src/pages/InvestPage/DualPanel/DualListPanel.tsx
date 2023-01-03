@@ -149,6 +149,7 @@ export const DualListPanel: any = withTranslation("common")(
     const dualType = new RegExp(pair).test(market ?? "")
       ? sdk.DUAL_TYPE.DUAL_BASE
       : sdk.DUAL_TYPE.DUAL_CURRENCY;
+    console.log('dualProducts', dualProducts)
 
     return (
       <Box display={"flex"} flexDirection={"column"} flex={1} marginBottom={2}>

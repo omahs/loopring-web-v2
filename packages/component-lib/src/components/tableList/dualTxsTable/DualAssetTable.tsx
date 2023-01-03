@@ -127,14 +127,15 @@ export const DualAssetTable = withTranslation(["tables", "common"])(
               sellSymbol,
               buySymbol,
               __raw__: {
-                order: { dualType },
+                order: { dualType, investmentStatus },
               },
             } = row;
             const [base, quote] =
               dualType === DUAL_TYPE.DUAL_BASE
                 ? [sellSymbol, buySymbol]
                 : [buySymbol, sellSymbol];
-            const showClock = true
+            
+            const showClock = investmentStatus === sdk.LABEL_INVESTMENT_STATUS.PROCESSING
             //${row.sellSymbol}/${row.buySymbol}
             return (
               <Typography
@@ -261,7 +262,8 @@ export const DualAssetTable = withTranslation(["tables", "common"])(
           headerCellClass: "textAlignRight",
           name: t("labelDualAssetAction"),
           formatter: ({ row }: FormatterProps<R, unknown>) => {
-            const showRefresh = true
+            const investmentStatus = row.__raw__.order.investmentStatus;
+            const showRefresh = investmentStatus === sdk.LABEL_INVESTMENT_STATUS.PROCESSING
             return showRefresh
               ? (
                 <Link onClick={(_e) => refresh(row)}>

@@ -169,6 +169,26 @@ export const useDualAsset = <R extends RawDataDualAssetItem>(
       setOpen(true);
     }
   };
+  const refresh = async (item: R) => {
+    // todo
+    // const {
+    //   __raw__: {
+    //     order: {
+    //       tokenInfoOrigin: { base, market },
+    //     },
+    //   },
+    // } = item;
+    // const {
+    //   dualPrice: { index },
+    // } = await LoopringAPI.defiAPI?.getDualIndex({
+    //   baseSymbol: base,
+    //   quoteSymbol: dualMarketMap[market].quoteAlias,
+    // });
+    // if (index) {
+    //   setDetail(getDetail(item, index));
+    //   setOpen(true);
+    // }
+  };
   const getDualTxList = React.useCallback(
     async ({ start, end, offset, limit = Limit }: any) => {
       setShowLoading(true);
@@ -290,6 +310,7 @@ export const useDualAsset = <R extends RawDataDualAssetItem>(
     detail,
     setOpen,
     dualOnInvestAsset,
+    refresh,
     // updateTickersUI,
   };
 };

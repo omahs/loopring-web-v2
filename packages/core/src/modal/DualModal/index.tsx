@@ -63,6 +63,7 @@ export const ModalDualPanel = withTranslation("common")(
     myLog("isShowDual", isShowDual);
     const { isMobile, coinJson } = useSettings();
     // const theme = useTheme();
+    console.log('dualInfo', dualInfo)
 
     return (
       <MuiModal

@@ -97,6 +97,7 @@ const MyLiquidity: any = withTranslation("common")(
       detail,
       setOpen,
       getDetail,
+      refresh
     } = useDualAsset();
 
     React.useEffect(() => {
@@ -159,6 +160,7 @@ const MyLiquidity: any = withTranslation("common")(
         (hideSmallBalances ? !o.smallBalance : true)
       );
     });
+    // console.log('dualList', dualList)
     return (
       <Box
         display={"flex"}
@@ -439,6 +441,7 @@ const MyLiquidity: any = withTranslation("common")(
                       pagination={pagination}
                       getDualAssetList={getDualTxList}
                       showDetail={showDetail}
+                      refresh={refresh}
                     />
                     <Modal
                       open={open}
